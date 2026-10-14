@@ -1,11 +1,12 @@
 import argparse
 import json
+import os
+import shutil
 import time
 from pathlib import Path
 
 import wikitextparser as wtp
 import requests
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -168,6 +169,7 @@ def main():
     )
     args = parser.parse_args()
 
+    shutil.rmtree(OUT_DIR)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     session = requests.Session()
     session.headers["User-Agent"] = USER_AGENT
