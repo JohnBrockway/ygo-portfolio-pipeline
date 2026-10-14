@@ -8,13 +8,14 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
-from parse_util import parse_card_table_2, get_printings, get_images
+from parse_card_util import parse_card_table_2, get_printings, get_images
 
 load_dotenv()
 
 API_URL = "https://yugipedia.com/api.php"
 CATEGORY = "Category:Duel Monsters cards"
-OUT_DIR = Path("data/raw/duel_monsters_cards")
+RAW_OUT_DIR = Path("data/raw")
+CARD_OUT_DIR = RAW_OUT_DIR / f"duel_monsters_cards"
 EMAIL_KEY = "USER_AGENT_EMAIL"
 
 # Yugipedia asks for a descriptive User-Agent with contact info, and at most one
@@ -73,15 +74,15 @@ def fetch_pages(session, max_requests=None):
         time.sleep(DELAY_SECONDS)
 
 
-def save_page(page):
-    wikitext_dict = parse_card_table_2(page["revisions"][0]["content"])
+def save_card_page(card_page):
+    wikitext_dict = parse_card_table_2(card_page["revisions"][0]["content"])
     if wikitext_dict is None:
-        print("Could not parse Card Table 2 for page " + page["pageid"])
+        print("Could not parse Card Table 2 for page " + card_page["pageid"])
         return
     record = {
-        "pageid": page["pageid"],
-        "title": page["title"],
-        "url": page["canonicalurl"],
+        "pageid": card_page["pageid"],
+        "title": card_page["title"],
+        "url": card_page["canonicalurl"],
         "name_ja": wikitext_dict.get("ja_name"),
         "password": wikitext_dict.get("password"),
         "konami_id": wikitext_dict.get("database_id"),
@@ -89,8 +90,16 @@ def save_page(page):
         "images": get_images(wikitext_dict["image"]) if "image" in wikitext_dict else [],
         "printings": get_printings(wikitext_dict),
     }
-    path = OUT_DIR / f"{page['pageid']}.json"
+    path = CARD_OUT_DIR / f"{card_page['pageid']}.json"
     path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def fetch_cards(session, max_requests):
+    saved = 0
+    for page in fetch_pages(session, max_requests):
+        save_card_page(page)
+        saved += 1
+    print(f"done: saved {saved} cards to {CARD_OUT_DIR}")
 
 
 def main():
@@ -103,16 +112,12 @@ def main():
     )
     args = parser.parse_args()
 
-    shutil.rmtree(OUT_DIR)
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    shutil.rmtree(RAW_OUT_DIR)
     session = requests.Session()
     session.headers["User-Agent"] = USER_AGENT
 
-    saved = 0
-    for page in fetch_pages(session, args.max_requests):
-        save_page(page)
-        saved += 1
-    print(f"done: saved {saved} pages to {OUT_DIR}")
+    CARD_OUT_DIR.mkdir(parents=True, exist_ok=True)
+    fetch_cards(session, args.max_requests)
 
 
 if __name__ == "__main__":
