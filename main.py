@@ -1,27 +1,14 @@
 import argparse
 import json
-import os
 import shutil
-import time
 from pathlib import Path
 
-import requests
-from dotenv import load_dotenv
-
+from mediawiki_util import make_session, query_pages
 from parse_card_util import parse_card_table_2, get_printings, get_images
 
-load_dotenv()
-
-API_URL = "https://yugipedia.com/api.php"
 CATEGORY = "Category:Duel Monsters cards"
 RAW_OUT_DIR = Path("data/raw")
 CARD_OUT_DIR = RAW_OUT_DIR / f"duel_monsters_cards"
-EMAIL_KEY = "USER_AGENT_EMAIL"
-
-# Yugipedia asks for a descriptive User-Agent with contact info, and at most one
-# request per second.
-USER_AGENT = "yugioh-collection-tracker/0.1 (contact: " + os.getenv(EMAIL_KEY) + ")"
-DELAY_SECONDS = 1.0
 
 # Yugipedia runs MediaWiki 1.31, so page text comes back directly under
 # "revisions" (no "slots"; do not add rvslots).
@@ -33,13 +20,10 @@ DELAY_SECONDS = 1.0
 # Set pages link to every card they contain, so each card's linkshere list
 # holds its sets' page IDs. It is the heaviest property, hence the namespace filter.
 # NOTE: any list property (linkshere, categories, links...) makes the API split
-# a page's data across several responses, so the paging loop below would also
-# need to merge responses until the API reports "batchcomplete". The simple
-# loop in its current state does not do that.
+# a page's data across several responses, so the paging loop in
+# mediawiki_util.query() would also need to merge responses until the API
+# reports "batchcomplete". The simple loop there does not do that.
 BASE_PARAMS = {
-    "action": "query",
-    "format": "json",
-    "formatversion": "2",
     "redirects": "true",
     "generator": "categorymembers",
     "gcmtitle": CATEGORY,           # what we're filtering by
@@ -50,34 +34,10 @@ BASE_PARAMS = {
 }
 
 
-def fetch_pages(session, max_requests=None):
-    """Yield every page in the category, following the API's paging tokens."""
-    params = dict(BASE_PARAMS)
-    requests_made = 0
-    while True:
-        response = session.get(API_URL, params=params, timeout=60)
-        response.raise_for_status()
-        data = response.json()
-        requests_made += 1
-
-        if "warnings" in data:
-            print("API warnings:", json.dumps(data["warnings"], indent=2))
-        print(f"request {requests_made}: {len(data['query']['pages'])} pages")
-
-        yield from data["query"]["pages"]
-
-        if "continue" not in data:
-            break
-        if max_requests and requests_made >= max_requests:
-            break
-        params.update(data["continue"])
-        time.sleep(DELAY_SECONDS)
-
-
 def save_card_page(card_page):
     wikitext_dict = parse_card_table_2(card_page["revisions"][0]["content"])
     if wikitext_dict is None:
-        print("Could not parse Card Table 2 for page " + card_page["pageid"])
+        print("Could not parse Card Table 2 for page " + str(card_page["pageid"]))
         return
     record = {
         "pageid": card_page["pageid"],
@@ -96,7 +56,7 @@ def save_card_page(card_page):
 
 def fetch_cards(session, max_requests):
     saved = 0
-    for page in fetch_pages(session, max_requests):
+    for page in query_pages(session, BASE_PARAMS, max_requests):
         save_card_page(page)
         saved += 1
     print(f"done: saved {saved} cards to {CARD_OUT_DIR}")
@@ -108,15 +68,15 @@ def main():
         "--max-requests",
         type=int,
         default=None,
-        help="stop after this many API requests (each returns up to 50 pages)",
+        help="stop after this many API requests (each returns up to 50 pages); "
+             "for sets, applies to each category separately",
     )
     args = parser.parse_args()
 
-    shutil.rmtree(RAW_OUT_DIR)
-    session = requests.Session()
-    session.headers["User-Agent"] = USER_AGENT
-
-    CARD_OUT_DIR.mkdir(parents=True, exist_ok=True)
+    session = make_session()
+    RAW_OUT_DIR.mkdir(parents=True, exist_ok=True)
+    shutil.rmtree(CARD_OUT_DIR, ignore_errors=True)
+    CARD_OUT_DIR.mkdir(parents=True)
     fetch_cards(session, args.max_requests)
 
 
