@@ -71,7 +71,7 @@ def discover_categories(session, roots, exclude=(), max_categories=2000):
 
 
 def fetch_tree_pages(session, categories, max_requests=None):
-    """Yield (category, page) for each direct page member of each category, once per pageid.
+    """Yield direct page members of each category, once per pageid.
 
     `max_requests` caps the API requests spent on EACH category (dev convenience).
     """
@@ -94,4 +94,4 @@ def fetch_tree_pages(session, categories, max_requests=None):
             if page["pageid"] in seen_ids:
                 continue
             seen_ids.add(page["pageid"])
-            yield category, page
+            yield page
