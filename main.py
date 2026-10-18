@@ -9,10 +9,10 @@ from mediawiki_util import make_session, query_pages
 from parse_card_util import parse_card_table_2, get_printings, get_images
 from parse_set_util import parse_set_page, SetParseError
 
-CATEGORY = "Category:Duel Monsters cards"
+CARD_CATEGORY = "Category:Duel Monsters cards"
 SET_ROOTS = ["Category:TCG sets", "Category:OCG sets"]
 RAW_OUT_DIR = Path("data/raw")
-CARD_OUT_DIR = RAW_OUT_DIR / f"duel_monsters_cards"
+CARD_OUT_DIR = RAW_OUT_DIR / "duel_monsters_cards"
 SET_OUT_DIR = RAW_OUT_DIR / "sets"
 SET_CATEGORIES_FILE = RAW_OUT_DIR / "set_categories.json"
 
@@ -29,10 +29,10 @@ SET_CATEGORIES_FILE = RAW_OUT_DIR / "set_categories.json"
 # a page's data across several responses, so the paging loop in
 # mediawiki_util.query() would also need to merge responses until the API
 # reports "batchcomplete". The simple loop there does not do that.
-BASE_PARAMS = {
+CARD_QUERY_PARAMS = {
     "redirects": "true",
     "generator": "categorymembers",
-    "gcmtitle": CATEGORY,           # what we're filtering by
+    "gcmtitle": CARD_CATEGORY,      # what we're filtering by
     "gcmlimit": "50",               # pages per request
     "prop": "revisions|info",       # properties to report from each page
     "rvprop": "content",            # props to include in the revisions prop
@@ -40,67 +40,81 @@ BASE_PARAMS = {
 }
 
 
-def save_card_page(card_page):
-    wikitext_dict = parse_card_table_2(card_page["revisions"][0]["content"])
-    if wikitext_dict is None:
-        print("Could not parse Card Table 2 for page " + str(card_page["pageid"]))
-        return
-    record = {
+def write_json_to_file(path, data):
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def reset_dir(path):
+    """Delete the directory if it exists, then recreate it empty."""
+    shutil.rmtree(path, ignore_errors=True)
+    path.mkdir(parents=True)
+
+
+def build_card_record(card_page):
+    """
+    Turn a raw card page into a JSON record to save, or None if it's not parsable with
+    the expected template.
+    """
+    card_fields = parse_card_table_2(card_page["revisions"][0]["content"])
+    if card_fields is None:
+        return None
+
+    return {
         "pageid": card_page["pageid"],
         "title": card_page["title"],
         "url": card_page["canonicalurl"],
-        "name_ja": wikitext_dict.get("ja_name"),
-        "password": wikitext_dict.get("password"),
-        "konami_id": wikitext_dict.get("database_id"),
-        "card_type": wikitext_dict.get("card_type", "Monster"),
-        "images": get_images(wikitext_dict["image"]) if "image" in wikitext_dict else [],
-        "printings": get_printings(wikitext_dict),
+        "name_ja": card_fields.get("ja_name"),
+        "password": card_fields.get("password"),
+        "konami_id": card_fields.get("database_id"),
+        "card_type": card_fields.get("card_type", "Monster"),
+        "images": get_images(card_fields["image"]) if "image" in card_fields else [],
+        "printings": get_printings(card_fields),
     }
-    path = CARD_OUT_DIR / f"{card_page['pageid']}.json"
-    path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def fetch_and_save_cards(session, max_requests):
     saved = 0
-    for page in query_pages(session, BASE_PARAMS, max_requests):
-        save_card_page(page)
+    skipped = 0
+    for page in query_pages(session, CARD_QUERY_PARAMS, max_requests):
+        record = build_card_record(page)
+        if record is None:
+            print(f"Could not parse page {page['pageid']}")
+            skipped += 1
+            continue
+        write_json_to_file(CARD_OUT_DIR / f"{record['pageid']}.json", record)
         saved += 1
-    print(f"done: saved {saved} cards to {CARD_OUT_DIR}")
-
-
-def save_set_page(set_page):
-    path = SET_OUT_DIR / f"{set_page['page_id']}-{set_page['region']}.json"
-    path.write_text(json.dumps(set_page, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"done: saved {saved} cards to {CARD_OUT_DIR}. ({skipped} skipped)")
 
 
 def fetch_and_save_sets(session, max_requests):
     tree = discover_categories(session, SET_ROOTS)
-    SET_CATEGORIES_FILE.write_text(json.dumps(tree, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_to_file(SET_CATEGORIES_FILE, tree)
     print(f"discovered {len(tree)} set categories (tree saved to {SET_CATEGORIES_FILE})")
 
-    all_records = 0
-    problems = defaultdict(list)
+    saved = 0
+    problems = defaultdict(list)  # reason -> list of page titles (with detail if any)
     for page in fetch_tree_pages(session, tree, max_requests):
-        try: 
-            records = parse_set_page({
-                "pageid": page["pageid"],
-                "title": page["title"],
-                "wikitext": page["revisions"][0]["content"],
-            })
+        try:
+            records = parse_set_page(page)
         except SetParseError as e:
-            problems[e.reason].append(f"{page['title']} [{e}]" if str(e) else page['title'])
+            message = page["title"]
+            if str(e):
+                message += f" [{e}]"
+            problems[e.reason].append(message)
             continue
         except Exception as e:  # anything unexpected shouldn't kill the run or vanish
             problems["unexpected"].append(f"{page['title']}: {type(e).__name__}: {e}")
             continue
 
         for record in records:
-            save_set_page(record)
-        all_records += len(records)
+            write_json_to_file(SET_OUT_DIR / f"{record['page_id']}-{record['region']}.json", record)
+        saved += len(records)
 
-    print(f"parsed {all_records} set records")
-    for reason, titles in sorted(problems.items()):
-        print(f"{reason} ({len(titles)}): {titles}")
+    print(f"parsed {saved} set records")
+    for reason, messages in sorted(problems.items()):
+        print(f"{reason} ({len(messages)}):")
+        for message in messages:
+            print(f"  {message}")
 
 
 def main():
@@ -123,13 +137,11 @@ def main():
     RAW_OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     if args.only in (None, "cards"):
-        shutil.rmtree(CARD_OUT_DIR, ignore_errors=True)
-        CARD_OUT_DIR.mkdir(parents=True)
+        reset_dir(CARD_OUT_DIR)
         fetch_and_save_cards(session, args.max_requests)
 
     if args.only in (None, "sets"):
-        shutil.rmtree(SET_OUT_DIR, ignore_errors=True)
-        SET_OUT_DIR.mkdir(parents=True)
+        reset_dir(SET_OUT_DIR)
         fetch_and_save_sets(session, args.max_requests)
 
 

@@ -28,10 +28,11 @@ DEFAULT_PARAMS = {
     "formatversion": "2",
 }
 
-_last_request = 0.0
+_last_request_time = 0.0
 
 
 def make_session():
+    """A requests session whose User-Agent carries the contact email Yugipedia asks for."""
     load_dotenv()
     email = os.getenv(EMAIL_KEY)
     if not email:
@@ -41,32 +42,48 @@ def make_session():
     return session
 
 
+def _throttle():
+    """Sleep as needed so requests start at least DELAY_SECONDS apart, process-wide."""
+    global _last_request_time
+    wait = DELAY_SECONDS - (time.monotonic() - _last_request_time)
+    if wait > 0:
+        time.sleep(wait)
+    _last_request_time = time.monotonic()
+
+
+def _backoff_delay(attempt):
+    """Exponential backoff for attempt 0, 1, 2, ...: 1s, 2s, 4s, 8s, 16s."""
+    return 2.0 ** attempt
+
+
 def _retry_delay(response, attempt):
+    """How long to wait before retrying: the server's Retry-After if it's a number of seconds, else backoff.
+
+    Retry-After can also be an HTTP date, which float() rejects, so that case uses backoff too.
+    """
     try:
         return float(response.headers.get("Retry-After", ""))
     except ValueError:
-        return 2.0 ** attempt
+        return _backoff_delay(attempt)
 
 
 def _get(session, params):
     """One API call: throttled, retried on 429/5xx/network errors, API errors raised."""
-    global _last_request
     for attempt in range(MAX_ATTEMPTS):
-        wait = DELAY_SECONDS - (time.monotonic() - _last_request)
-        if wait > 0:
-            time.sleep(wait)
-        _last_request = time.monotonic()
+        _throttle()
+        attempt_label = f"attempt {attempt + 1}/{MAX_ATTEMPTS} failed"
 
         try:
             response = session.get(API_URL, params=params, timeout=60)
         except (requests.ConnectionError, requests.Timeout) as error:
-            print(f"network error ({error}); retry {attempt + 1}/{MAX_ATTEMPTS}")
-            time.sleep(2.0 ** attempt)
+            delay = _backoff_delay(attempt)
+            print(f"{attempt_label}: network error ({error}); waiting {delay:.0f}s")
+            time.sleep(delay)
             continue
 
         if response.status_code in RETRY_STATUSES:
             delay = _retry_delay(response, attempt)
-            print(f"HTTP {response.status_code}; waiting {delay:.0f}s (retry {attempt + 1}/{MAX_ATTEMPTS})")
+            print(f"{attempt_label}: HTTP {response.status_code}; waiting {delay:.0f}s")
             time.sleep(delay)
             continue
 

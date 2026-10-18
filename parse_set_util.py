@@ -1,13 +1,8 @@
 import re
 from datetime import datetime
+from regions import WHITELISTED_REGIONS
 
 import wikitextparser as wtp
-
-# Regions we save records for. Add codes here to include in master set, otherwise they
-# are ignored and don't exist for purposes of the app.
-# Codes are the keys in  <region>_release_date / <region>_prefix and, uppercased,
-# the codes in {{Set navigation | lists = ...}}. e.g. "it", "sc"
-WHITELISTED_REGIONS = {"en", "na", "jp"}
 
 # There are two different namespaces of codes present in dict keys
 #   - Regions ("jp", "en", etc.)
@@ -31,7 +26,6 @@ NAME_ALIAS = {"na": "en"}
 # in order, after and only if the top-level region produces no date
 DATE_FALLBACK = {"en": ["na", "eu", "oc"]}
 
-RUBY = re.compile(r"\{\{\s*Ruby\s*\|\s*([^|}]*?)\s*\|[^}]*\}\}", re.I)
 INVISIBLE = re.compile("[\u200b-\u200d\u2060\ufeff]")
 
 
@@ -48,8 +42,13 @@ def parse_infobox_set(wikitext):
 
 
 def clean(value):
-    """Unwrap {{Ruby}}, [[links]] and comments down to plain text."""
-    return wtp.parse(RUBY.sub(r"\1", value)).plain_text().strip()
+    """Strip wiki markup down to readable text, but keep templates like {{Ruby|墓|はか}} as written.
+
+    plain_text() turns [[links]] into their display text and removes '''bold'''/''italic''
+    markers and <!-- comments -->. It would also remove templates by default, which would
+    lose the Ruby readings, so replace_templates=False tells it to leave them alone.
+    """
+    return wtp.parse(value).plain_text(replace_templates=False).strip()
 
 
 def primary_lang(region):
@@ -59,14 +58,22 @@ def primary_lang(region):
 
 
 def get_all_names(fields, region):
-    """All *_name fields for region, keyed byl anguage ('ja', 'romaji', 'ja_trans', ...)."""
+    """
+    All *_name fields present in fields that are used for region, keyed by
+    the part before `_name` ('ja', 'romaji', 'ja_trans', ...).
+    """
     region_key = NAME_ALIAS.get(region, region)
-    return {
-        key[: -len("_name")]: clean(value)
-        for key, value in fields.items()
-        if key.endswith("_name") and value
-        and LANG_TO_REGION_MAP.get(lang := key.split("_")[0], lang) == region_key
-    }
+    names = {}
+    for key, value in fields.items():
+        if not key.endswith("_name"):
+            continue
+        lang = key.split("_")[0]
+        if LANG_TO_REGION_MAP.get(lang, lang) != region_key:
+            continue
+        text = clean(value)
+        if text:
+            names[key.removesuffix("_name")] = text
+    return names
 
 
 def to_iso(text):
@@ -75,22 +82,6 @@ def to_iso(text):
         return datetime.strptime(text, "%B %d, %Y").date().isoformat()
     except ValueError:
         return None
-
-
-def pick_release_date(all_dates, region):
-    """The region's own date, else the first DATE_FALLBACK region that has one; None if neither."""
-    for source in [region, *DATE_FALLBACK.get(region, [])]:
-        if source in all_dates:
-            return {**all_dates[source], "source_region": source}
-    return None
-
-
-def get_release_dates(fields):
-    """{region: {'text', 'iso'}} for ALL regions (unfiltered: its regions are the Lists fallback)."""
-    return {
-        region: {"text": text, "iso": to_iso(text)}
-        for region, text in get_region_values(fields, "release_date").items()
-    }
 
 
 def get_region_values(fields, suffix):
@@ -102,9 +93,25 @@ def get_region_values(fields, suffix):
         text = clean(value)
         if not text:
             continue
-        for region in key[: -len(suffix) - 1].split("/"):
+        for region in key.removesuffix(f"_{suffix}").split("/"):
             values[region.strip()] = text
     return values
+
+
+def get_release_dates(fields):
+    """{region: {'text', 'iso'}} for ALL regions (unfiltered: its regions are the Lists fallback)."""
+    return {
+        region: {"text": text, "iso": to_iso(text)}
+        for region, text in get_region_values(fields, "release_date").items()
+    }
+
+
+def pick_release_date(all_dates, region):
+    """The region's own date, else the first DATE_FALLBACK region that has one; None if neither."""
+    for source in [region, *DATE_FALLBACK.get(region, [])]:
+        if source in all_dates:
+            return {**all_dates[source], "source_region": source}
+    return None
 
 
 def get_listed_regions(wikitext):
@@ -123,7 +130,7 @@ def parse_set_page(page):
     Returns one record per whitelisted region the set was released in. Raises a
     SetParseError if the page can't produce a single record for any reason.
     """
-    wikitext = page["wikitext"]
+    wikitext = page["revisions"][0]["content"]
     fields = parse_infobox_set(wikitext)
     if fields is None:
         raise NoInfobox()
@@ -167,4 +174,4 @@ class NoRegionDetermined(SetParseError):
     reason = "no_region"
 
 class UnsupportedRegion(SetParseError):
-    reason = "no_kept_region"
+    reason = "unsupported_region"
