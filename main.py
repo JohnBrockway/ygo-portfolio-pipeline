@@ -69,7 +69,7 @@ def fetch_and_save_cards(session, max_requests):
 
 
 def save_set_page(set_page):
-    path = SET_OUT_DIR / f"{set_page['page_id']}-{set_page['game']}.json"
+    path = SET_OUT_DIR / f"{set_page['page_id']}-{set_page['region']}.json"
     path.write_text(json.dumps(set_page, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
@@ -92,9 +92,6 @@ def fetch_and_save_sets(session, max_requests):
             continue
         except Exception as e:  # anything unexpected shouldn't kill the run or vanish
             problems["unexpected"].append(f"{page['title']}: {type(e).__name__}: {e}")
-            continue
-        if not records:
-            problems["empty_unexplained"].append(page["title"])
             continue
 
         for record in records:
