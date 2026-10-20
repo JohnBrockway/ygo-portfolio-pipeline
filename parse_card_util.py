@@ -1,11 +1,15 @@
+import re
+
 from regions import WHITELISTED_REGIONS
 
 import wikitextparser as wtp
 
+COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+
 
 def parse_card_table_2(wikitext):
     """Return the CardTable2 template's fields as a {name: value} dict, or None if the page doesn't have that template."""
-    parsed = wtp.parse(wikitext)
+    parsed = wtp.parse(COMMENT_RE.sub("", wikitext))
     for template in parsed.templates:
         if template.name.strip().lower() == "cardtable2":
             return {arg.name.strip(): arg.value.strip() for arg in template.arguments}

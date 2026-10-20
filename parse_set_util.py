@@ -142,7 +142,7 @@ def parse_set_page(page):
     # Lists is primary; release-date used to determine regions only if there's no usable Lists field.
     regions = get_listed_regions(wikitext) or set(all_dates)
     if not regions:
-        raise NoRegionDetermined(f"No Lists field or release dates in wikitext {wikitext}")
+        raise NoRegionDetermined(f"No Lists field or release dates in wikitext")
     kept = regions & WHITELISTED_REGIONS
     if not kept:
         raise UnsupportedRegion(f"No whitelisted region among {sorted(regions)}")

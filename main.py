@@ -10,7 +10,7 @@ from parse_card_util import parse_card_table_2, get_printings, get_images
 from parse_set_util import parse_set_page, SetParseError
 
 CARD_CATEGORY = "Category:Duel Monsters cards"
-SET_ROOTS = ["Category:TCG sets", "Category:OCG sets"]
+SET_ROOTS = ["Category:Sets"]
 RAW_OUT_DIR = Path("data/raw")
 CARD_OUT_DIR = RAW_OUT_DIR / "duel_monsters_cards"
 SET_OUT_DIR = RAW_OUT_DIR / "sets"
@@ -50,6 +50,16 @@ def reset_dir(path):
     path.mkdir(parents=True)
 
 
+def verify_numeral(string):
+    """
+    Returns string if it's a string representation of a number with ASCII numerals, otherwise None
+    """
+    value = (string or "").strip()
+    if value.isascii() and value.isdigit():
+        return value
+    return None
+
+
 def build_card_record(card_page):
     """
     Turn a raw card page into a JSON record to save, or None if it's not parsable with
@@ -59,13 +69,16 @@ def build_card_record(card_page):
     if card_fields is None:
         return None
 
+    password = verify_numeral(card_fields.get("password"))
+    konami_id = verify_numeral(card_fields.get("database_id"))
+
     return {
         "pageid": card_page["pageid"],
         "title": card_page["title"],
         "url": card_page["canonicalurl"],
         "name_ja": card_fields.get("ja_name"),
-        "password": card_fields.get("password"),
-        "konami_id": card_fields.get("database_id"),
+        "password": password,
+        "konami_id": konami_id,
         "card_type": card_fields.get("card_type", "Monster"),
         "images": get_images(card_fields["image"]) if "image" in card_fields else [],
         "printings": get_printings(card_fields),
@@ -113,8 +126,8 @@ def fetch_and_save_sets(session, max_requests):
     print(f"parsed {saved} set records")
     for reason, messages in sorted(problems.items()):
         print(f"{reason} ({len(messages)}):")
-        for message in messages:
-            print(f"  {message}")
+        #for message in messages:
+        print(f"  {messages}")
 
 
 def main():

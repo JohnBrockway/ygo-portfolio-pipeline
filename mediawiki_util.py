@@ -17,7 +17,7 @@ EMAIL_KEY = "USER_AGENT_EMAIL"
 # not just between pages of one query.
 DELAY_SECONDS = 1.0
 
-RETRY_STATUSES = {429, 500, 502, 503, 504}
+RETRY_STATUSES = {429, 500, 502, 503, 504, 520}
 MAX_ATTEMPTS = 5
 
 # Every request here is an action=query. formatversion 2 gives clean JSON
