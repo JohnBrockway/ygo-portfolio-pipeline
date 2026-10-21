@@ -11,10 +11,12 @@ from parse_set_util import parse_set_page, SetParseError
 
 CARD_CATEGORY = "Category:Duel Monsters cards"
 SET_ROOTS = ["Category:Sets"]
+EXCLUDED_SET_CATEGORIES = ["Category:Set information pages"]
 RAW_OUT_DIR = Path("data/raw")
 CARD_OUT_DIR = RAW_OUT_DIR / "duel_monsters_cards"
 SET_OUT_DIR = RAW_OUT_DIR / "sets"
 SET_CATEGORIES_FILE = RAW_OUT_DIR / "set_categories.json"
+KNOWN_ERRORS_FILE = Path("known_set_errors.json")
 
 # Yugipedia runs MediaWiki 1.31, so page text comes back directly under
 # "revisions" (no "slots"; do not add rvslots).
@@ -99,21 +101,32 @@ def fetch_and_save_cards(session, max_requests):
     print(f"done: saved {saved} cards to {CARD_OUT_DIR}. ({skipped} skipped)")
 
 
+def load_known_errors(path=KNOWN_ERRORS_FILE):
+    """Set of (page_id, title, reason) for sets we've already reviewed and accepted as unparseable."""
+    if not path.exists():
+        return set()
+    with open(path, encoding="utf-8") as f:
+        return {(entry["page_id"], entry["title"], entry["reason"]) for entry in json.load(f)}
+
+
 def fetch_and_save_sets(session, max_requests):
-    tree = discover_categories(session, SET_ROOTS)
+    tree = discover_categories(session, SET_ROOTS, EXCLUDED_SET_CATEGORIES)
     write_json_to_file(SET_CATEGORIES_FILE, tree)
     print(f"discovered {len(tree)} set categories (tree saved to {SET_CATEGORIES_FILE})")
 
+    known_errors = load_known_errors()
+    known_errors_seen = set() 
     saved = 0
     problems = defaultdict(list)  # reason -> list of page titles (with detail if any)
     for page in fetch_tree_pages(session, tree, max_requests):
         try:
             records = parse_set_page(page)
         except SetParseError as e:
-            message = page["title"]
-            if str(e):
-                message += f" [{e}]"
-            problems[e.reason].append(message)
+            key = (page["pageid"], page["title"], e.reason)
+            if key in known_errors:
+                known_errors_seen.add(key)
+                continue
+            problems[e.reason].append(f'{{"page_id": {page["pageid"]}, "title": "{page["title"]}", "reason": "{e.reason}", "comment": "{e}"}},')
             continue
         except Exception as e:  # anything unexpected shouldn't kill the run or vanish
             problems["unexpected"].append(f"{page['title']}: {type(e).__name__}: {e}")
@@ -123,11 +136,18 @@ def fetch_and_save_sets(session, max_requests):
             write_json_to_file(SET_OUT_DIR / f"{record['page_id']}-{record['region']}.json", record)
         saved += len(records)
 
-    print(f"parsed {saved} set records")
+    print(f"Saved {saved} set records ({len(known_errors_seen)} known errors suppressed)")
+
+    stale = sorted(known_errors - known_errors_seen)
+    if stale:
+        print(f"STALE known errors ({len(stale)}) - in {KNOWN_ERRORS_FILE} but not encountered this run:")
+        for page_id, title, reason in stale:
+            print(f"    {page_id} {title!r} ({reason})")
+
     for reason, messages in sorted(problems.items()):
         print(f"{reason} ({len(messages)}):")
-        #for message in messages:
-        print(f"  {messages}")
+        for message in messages:
+            print(f"    {message}")
 
 
 def main():

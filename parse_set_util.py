@@ -134,6 +134,8 @@ def parse_set_page(page):
     fields = parse_infobox_set(wikitext)
     if fields is None:
         raise NoInfobox()
+    if clean(fields.get("appears_in_video_games", "")):
+        raise VideoGameSet(f"Video game set: {clean(fields['appears_in_video_games'])}")
 
     all_dates = get_release_dates(fields)
     prefixes = get_region_values(fields, "prefix")
@@ -172,6 +174,9 @@ class NoInfobox(SetParseError):
 
 class NoRegionDetermined(SetParseError):
     reason = "no_region"
+
+class VideoGameSet(SetParseError):
+    reason = "video_game_set"
 
 class UnsupportedRegion(SetParseError):
     reason = "unsupported_region"
