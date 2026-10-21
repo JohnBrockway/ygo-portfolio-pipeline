@@ -4,6 +4,7 @@ from collections import namedtuple
 from cards import build_card_record, choose_card_id
 from printings import build_printing_records, resolve_card_printings
 from set_index import SetIndex
+from set_pruning import build_set_records
 
 MasterData = namedtuple("MasterData", ["cards", "sets", "printings"])
 
@@ -45,20 +46,7 @@ def build_master_data(card_records, set_records, failures):
     set_index = SetIndex(set_records, failures)
     cards_by_id, resolved_printings = collect_cards(card_records, set_index, failures)
     printings = build_printing_records(resolved_printings, failures)
-    sets = []
-    for set_id, set_record in sorted(set_index.sets_by_id.items()):
-        sets.append({
-            "set_id": set_id,
-            "page_id": set_record.get("page_id"),
-            "title": set_record["title"],
-            "region": set_record["region"],
-            "name": set_record.get("name"),
-            "names": set_record.get("names"),
-            "image": set_record.get("image"),
-            "prefix": set_record.get("prefix"),
-            "postfix": set_record.get("postfix"),
-            "release_date": set_record.get("release_date"),
-        })
+    sets = build_set_records(set_index, printings, failures)
 
     cards = sorted(cards_by_id.values(), key=lambda card: card["card_id"])
     return MasterData(cards=cards, sets=sets, printings=printings)
