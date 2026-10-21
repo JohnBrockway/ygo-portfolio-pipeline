@@ -12,11 +12,11 @@ from parse_set_util import parse_set_page, SetParseError
 CARD_CATEGORY = "Category:Duel Monsters cards"
 SET_ROOTS = ["Category:Sets"]
 EXCLUDED_SET_CATEGORIES = ["Category:Set information pages"]
-RAW_OUT_DIR = Path("data/raw")
+RAW_OUT_DIR = Path(__file__).resolve().parent / "../data/raw"
 CARD_OUT_DIR = RAW_OUT_DIR / "duel_monsters_cards"
 SET_OUT_DIR = RAW_OUT_DIR / "sets"
 SET_CATEGORIES_FILE = RAW_OUT_DIR / "set_categories.json"
-KNOWN_ERRORS_FILE = Path("known_set_errors.json")
+KNOWN_ERRORS_FILE = Path(__file__).resolve().parent / "known_set_errors.json"
 
 # Yugipedia runs MediaWiki 1.31, so page text comes back directly under
 # "revisions" (no "slots"; do not add rvslots).
