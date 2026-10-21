@@ -5,9 +5,12 @@ build_backend.py - join card printings to set records and write the master datas
 Inputs (JSON files, one record per file or a list per file; searched recursively):
   --cards-dir   card records  (pageid, title, konami_id, password, printings[...], images[...])
   --sets-dir    set records   (page_id, title, region, name, names, image, prefix, release_date ...)
-  --expected-empty  optional JSON: [{"set_id": "1001672-jp", "title": "Set Page Title"}, ...]. Sets
-                    we already know have no printings. set_id and title must both match exactly. A
-                    set with no printings is only flagged (unexpected_empty_set) if it is NOT listed here.
+  --expected-empty  optional JSON: [{"set_id": "1001672-jp", "title": "Set Page Title"}, ...]. Sets 
+                    we already know have no printings. set_id and title must both match exactly.
+                    A set with no printings is flagged (unexpected_empty_set) if it is NOT listed here.
+                    A listed set that DOES have printings is flagged
+                    (expected_empty_set_has_printings), so it can be removed from the list.
+
 
 
 Outputs (in --out-dir):
