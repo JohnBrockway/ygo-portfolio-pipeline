@@ -42,11 +42,11 @@ def collect_cards(card_records, set_index, failures):
     return cards_by_id, resolved_printings
 
 
-def build_master_data(card_records, set_records, failures):
+def build_master_data(card_records, set_records, expected_empty, failures):
     set_index = SetIndex(set_records, failures)
     cards_by_id, resolved_printings = collect_cards(card_records, set_index, failures)
     printings = build_printing_records(resolved_printings, failures)
-    sets = build_set_records(set_index, printings, failures)
+    sets = build_set_records(set_index, printings, expected_empty, failures)
 
     cards = sorted(cards_by_id.values(), key=lambda card: card["card_id"])
     return MasterData(cards=cards, sets=sets, printings=printings)

@@ -39,3 +39,23 @@ def load_records(path, record_type, failures):
 
     log.info("loaded %d %s records from %d files", len(records), record_type, len(files))
     return records
+
+
+def load_expected_empty(path):
+    """Sets we already know have no printings, as a set of (set_id, title) tuples.
+
+    The file is a list of objects like {"set_id": "1001672-jp", "title": "Some Set Page"}. 
+    Extra keys (e.g. a "note") are ignored. A missing file just means nothing is expected to be empty.
+    An entry without both keys raises ValueError, since that is a mistake in the file itself.
+    """
+    if not path or not Path(path).exists():
+        return set()
+
+    entries = json.loads(Path(path).read_text(encoding="utf-8"))
+
+    expected_empty = set()
+    for entry in entries:
+        if not isinstance(entry, dict) or "set_id" not in entry or "title" not in entry:
+            raise ValueError(f'{path}: expected {{"set_id": ..., "title": ...}}, got {entry!r}')
+        expected_empty.add((entry["set_id"], entry["title"]))
+    return expected_empty
