@@ -40,5 +40,29 @@
     "alias": "Invasion: Vengeance: Special Edition",
     "target_set_id": "470548-en",
     "comment": "Card pages have extra colon"
+  },
+  {
+    "region": "jp",
+    "alias": "Collector's Pack: Duelist of Legend Version",
+    "target_set_id": "306472-jp",
+    "comment": "Set page doesn't include apostrophe"
+  },
+  {
+    "region": "jp",
+    "alias": "Expert Edition 2",
+    "target_set_id": "7457-jp",
+    "comment": "One card page doesn't include the 'Volume' in the title"
+  },
+  {
+    "region": "en",
+    "alias": "Raging Tempest: Special Edition",
+    "target_set_id": "464594-en",
+    "comment": "Set page doesn't include colon"
+  },
+  {
+    "region": "en",
+    "alias": "Yu-Gi-Oh! GX The Beginning of Destiny promotional cards",
+    "target_set_id": "509112-en",
+    "comment": "Called Yu-Gi-Oh! GX Tag Force Evolution in Japan, so that's the page title"
   }
 ]
