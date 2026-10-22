@@ -26,8 +26,13 @@ def resolve_card_printings(card_id, card_title, raw_printings, set_index, failur
         set_number = (raw.get("set_number") or "").strip() or None
 
         # What gets logged if anything goes wrong with this printing.
-        description = {"card_id": card_id, "card": card_title, "region": region,
-                       "set_name": set_name, "set_number": set_number}
+        description = {
+            "card_id": card_id, 
+            "card": card_title, 
+            "region": region,
+            "set_name": set_name,
+            "set_number": set_number
+        }
 
         if not set_name or not region:
             failures.add("printing_missing_set_name_or_region", **description)

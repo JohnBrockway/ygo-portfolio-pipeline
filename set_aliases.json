@@ -1,0 +1,44 @@
+[
+  {
+    "region": "na",
+    "alias": "Magic Ruler",
+    "target_set_id": "117-na",
+    "comment": "NA printings of MRL use Magic; the set page title is Spell Ruler"
+  },
+  {
+    "region": "jp",
+    "alias": "Speed Start Deck Link Edition",
+    "target_set_id": "584739-jp",
+    "comment": "Missing colon in card pages"
+  },
+  {
+    "region": "jp",
+    "alias": "Speed Start Deck Synchro Edition",
+    "target_set_id": "584740-jp",
+    "comment": "Missing colon in card pages"
+  },
+  {
+    "region": "en",
+    "alias": "eFootball collaboration cards",
+    "target_set_id": "1146891-en",
+    "comment": "Page names don't start with lowercase"
+  },
+  {
+    "region": "jp",
+    "alias": "eFootball collaboration cards",
+    "target_set_id": "1146891-jp",
+    "comment": "Page names don't start with lowercase"
+  },
+  {
+    "region": "en",
+    "alias": "Maximum Crisis: Special Edition",
+    "target_set_id": "485360-en",
+    "comment": "Missing colon in page title"
+  },
+  {
+    "region": "en",
+    "alias": "Invasion: Vengeance: Special Edition",
+    "target_set_id": "470548-en",
+    "comment": "Card pages have extra colon"
+  }
+]

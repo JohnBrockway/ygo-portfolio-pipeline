@@ -48,5 +48,7 @@ def build_master_data(card_records, set_records, expected_empty, failures):
     printings = build_printing_records(resolved_printings, failures)
     sets = build_set_records(set_index, printings, expected_empty, failures)
 
+    set_index.report_unused_aliases(failures)
+
     cards = sorted(cards_by_id.values(), key=lambda card: card["card_id"])
     return MasterData(cards=cards, sets=sets, printings=printings)
