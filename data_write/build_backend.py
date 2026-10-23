@@ -29,7 +29,7 @@ from pathlib import Path
 from failures import Failures
 from data_join_orchestrate import build_master_data
 from output_writer import write_master_files
-from record_loading import load_expected_empty, load_records
+from record_loading import load_expected_empty, load_records, load_card_id_overrides
 
 log = logging.getLogger("build_master")
 
@@ -41,6 +41,7 @@ def parse_args():
     parser.add_argument("--sets-dir", required=True)
     parser.add_argument("--out-dir", default="out")
     parser.add_argument("--expected-empty", default="expected_empty_sets.json")
+    parser.add_argument("--known-duplicate-cards", default="known_duplicate_cards.json")
     parser.add_argument("--pretty", action="store_true",
                         help="indent JSON (dev only; bigger files)")
     return parser.parse_args()
@@ -71,8 +72,9 @@ def main():
     card_records = load_records(args.cards_dir, "card", failures)
     set_records = load_records(args.sets_dir, "set", failures)
     expected_empty = load_expected_empty(args.expected_empty)
+    known_duplicate_cards = load_card_id_overrides(args.known_duplicate_cards)
 
-    master = build_master_data(card_records, set_records, expected_empty, failures)
+    master = build_master_data(card_records, set_records, expected_empty, known_duplicate_cards, failures)
     counts = write_master_files(out_dir, master, failures, pretty=args.pretty)
 
     log.info("DONE %s", counts)

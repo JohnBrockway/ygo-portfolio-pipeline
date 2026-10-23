@@ -59,3 +59,19 @@ def load_expected_empty(path):
             raise ValueError(f'{path}: expected {{"set_id": ..., "title": ...}}, got {entry!r}')
         expected_empty.add((entry["set_id"], entry["title"]))
     return expected_empty
+
+def load_card_id_overrides(path):
+    """Load the manual card id overrides, keyed by wiki pageid."""
+    if not path or not Path(path).exists():
+        return {}
+
+    entries = json.loads(Path(path).read_text(encoding="utf-8"))
+
+    overrides = {}
+    for entry in entries:
+        pageid = entry["pageid"]
+        if pageid in overrides:
+            raise ValueError(f"Two card id overrides for pageid {pageid}")
+        overrides[pageid] = entry
+
+    return overrides
