@@ -130,7 +130,10 @@ def parse_set_page(page):
     Returns one record per whitelisted region the set was released in. Raises a
     SetParseError if the page can't produce a single record for any reason.
     """
-    wikitext = page["revisions"][0]["content"]
+    revisions = page.get("revisions")
+    if not revisions:
+        raise NoWikitext()
+    wikitext = revisions[0]["slots"]["main"]["content"]
     fields = parse_infobox_set(wikitext)
     if fields is None:
         raise NoInfobox()
@@ -168,6 +171,9 @@ def parse_set_page(page):
 
 class SetParseError(Exception):
     reason = "parse_error"
+
+class NoWikitext(SetParseError):
+    reason = "absent_or_malformed_wikitext"
 
 class NoInfobox(SetParseError):
     reason = "no_infobox"

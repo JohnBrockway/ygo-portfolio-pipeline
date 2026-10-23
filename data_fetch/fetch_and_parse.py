@@ -18,9 +18,6 @@ SET_OUT_DIR = RAW_OUT_DIR / "sets"
 SET_CATEGORIES_FILE = RAW_OUT_DIR / "set_categories.json"
 KNOWN_ERRORS_FILE = Path(__file__).resolve().parent / "known_set_errors.json"
 
-# Yugipedia runs MediaWiki 1.31, so page text comes back directly under
-# "revisions" (no "slots"; do not add rvslots).
-#
 # FALLBACK, kept for posterity: if matching set pages by the set names in the
 # wikitext runs into trouble, add "linkshere" to "prop" below plus
 #   "lhlimit": "max", "lhprop": "pageid|title|redirect",
@@ -38,6 +35,7 @@ CARD_QUERY_PARAMS = {
     "gcmlimit": "50",               # pages per request
     "prop": "revisions|info",       # properties to report from each page
     "rvprop": "content",            # props to include in the revisions prop
+    "rvslots": "main",              # wikitext is stored in the main slot
     "inprop": "url",                # extra optional fields to include in info prop
 }
 
@@ -67,7 +65,10 @@ def build_card_record(card_page):
     Turn a raw card page into a JSON record to save, or None if it's not parsable with
     the expected template.
     """
-    card_fields = parse_card_table_2(card_page["revisions"][0]["content"])
+    revisions = card_page.get("revisions")
+    if not revisions:
+        return None
+    card_fields = parse_card_table_2(revisions[0]["slots"]["main"]["content"])
     if card_fields is None:
         return None
 

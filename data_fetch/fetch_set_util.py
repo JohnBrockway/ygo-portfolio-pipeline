@@ -86,6 +86,7 @@ def fetch_tree_pages(session, categories, max_requests=None):
             "gcmlimit": "50",
             "prop": "revisions|info",       # same properties as the card fetch
             "rvprop": "content",
+            "rvslots": "main",
             "inprop": "url",
         }
         for page in query_pages(session, params, max_requests):
