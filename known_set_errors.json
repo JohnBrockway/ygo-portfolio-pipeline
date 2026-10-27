@@ -874,6 +874,7 @@
     {"page_id": 461301, "title": "OTS Tournament Pack", "reason": "no_infobox", "comment": ""},
     {"page_id": 188810, "title": "Turbo Pack", "reason": "no_infobox", "comment": ""},
     {"page_id": 76175, "title": "Duelist League participation cards", "reason": "no_infobox", "comment": ""},
+    {"page_id": 1196045, "title": "Advance Pack", "reason": "no_infobox", "comment": "Meta info page"},
 
     {"page_id": 158043, "title": "Duel Terminal 4 (YGOO-DT)", "reason": "no_region", "comment": "Yu-Gi-Oh! Online"},
     {"page_id": 1072622, "title": "Duelist Item Pin Set", "reason": "no_region", "comment": "Pins"},
@@ -2235,6 +2236,10 @@
     {"page_id": 709904, "title": "Zuzu Boyle pack (Legacy of the Duelist)", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist"},
     {"page_id": 710139, "title": "Yugi pack (Link Evolution)", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist: Link Evolution"},
     {"page_id": 710548, "title": "Zuzu Boyle pack (Link Evolution)", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist: Link Evolution"},
+    {"page_id": 1236693, "title": "Gong Strong pack (Link Evolution)", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist: Link Evolution"},
+    {"page_id": 1236694, "title": "Shay pack", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist: Link Evolution"},
+    {"page_id": 1236696, "title": "Yuya Sakaki pack (Link Evolution)", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist: Link Evolution"},
+    {"page_id": 1236695, "title": "Declan Akaba pack (Link Evolution)", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist: Link Evolution"},
 
     {"page_id": 346585, "title": "2-Player Starter Deck: Yuya & Declan", "reason": "unsupported_region", "comment": "No whitelisted region among ['de', 'eu', 'fr', 'it', 'pt', 'sp']"},
     {"page_id": 588541, "title": "15th Anniversary Playmat promotion", "reason": "unsupported_region", "comment": "No whitelisted region among ['kr']"},
@@ -2685,5 +2690,8 @@
     {"page_id": 1204177, "title": "Yu-Gi-Oh! World Championship Qualifier 2026 Mainland China Finals prize card", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"},
     {"page_id": 1204178, "title": "Yu-Gi-Oh! World Championship Qualifier 2026 Asia Finals prize card", "reason": "unsupported_region", "comment": "No whitelisted region among ['ae']"},
     {"page_id": 588120, "title": "Yugi's Uncut Card Sheet promotion", "reason": "unsupported_region", "comment": "No whitelisted region among ['kr']"},
-    {"page_id": 1150871, "title": "Zoodiac Duel Set", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"}
+    {"page_id": 1150871, "title": "Zoodiac Duel Set", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"},
+    {"page_id": 1236585, "title": "Duelist Card Protector: Melffy Rabbys", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"},
+    {"page_id": 1236843, "title": "Flagship Official Tournament Store Special Tournament Token Pack 2026 Vol.2", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"},
+    {"page_id": 1236588, "title": "Witchcrafter Madame Verre Duel Set", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"}
 ]
