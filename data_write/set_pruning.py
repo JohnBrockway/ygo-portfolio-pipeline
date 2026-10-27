@@ -23,6 +23,7 @@ def build_set_record(set_record, printing_count):
         "prefix": set_record.get("prefix"),
         "postfix": set_record.get("postfix"),
         "release_date": set_record.get("release_date"),
+        "editions": set_record["editions"],
         "printing_count": printing_count,
     }
 
