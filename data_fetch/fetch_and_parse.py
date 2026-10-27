@@ -8,7 +8,7 @@ from failures import Failures
 from fetch_set_util import discover_categories, fetch_tree_pages
 from mediawiki_util import make_session, query_pages
 from parse_card_util import parse_card_table_2, get_printings, get_images
-from parse_set_util import parse_set_page, SetParseError
+from parse_set_util import parse_set_page
 
 CARD_CATEGORY = "Category:Duel Monsters cards"
 SET_ROOTS = ["Category:Sets"]
@@ -116,36 +116,15 @@ def fetch_and_save_sets(session, max_requests, failures):
     write_json_to_file(SET_CATEGORIES_FILE, tree)
     print(f"discovered {len(tree)} set categories (tree saved to {SET_CATEGORIES_FILE})")
 
-    known_errors = load_known_errors()
-    known_errors_seen = set() 
     saved = 0
-    problems = defaultdict(list)  # reason -> list of page titles (with detail if any)
     for page in fetch_tree_pages(session, tree, max_requests):
-        try:
-            records = parse_set_page(page)
-        except SetParseError as e:
-            key = (page["pageid"], page["title"], e.reason)
-            if key in known_errors:
-                known_errors_seen.add(key)
-                continue
-            # TODO See if we can pass this into parse_set_page to avoid exception pattern, without
-            #      losing the ability to track stale entries
-            failures.add(e.reason, page_id=page["pageid"], title=page["title"], comment=str(e))
-            continue
-        except Exception as e:  # anything unexpected shouldn't kill the run or vanish
-            failures.add("unexpected_set_parse_error", page_id=page["pageid"], title=page["title"], comment=str(e))
-            continue
+        records = parse_set_page(page, failures)
 
         for record in records:
             write_json_to_file(SET_OUT_DIR / f"{record['page_id']}-{record['region']}.json", record)
         saved += len(records)
 
-    print(f"Saved {saved} set records ({len(known_errors_seen)} known errors suppressed)")
-
-    stale = sorted(known_errors - known_errors_seen)
-    if stale:
-        for page_id, title, reason in stale:
-            failures.add("stale_known_set_error", page_id=page_id, title=title, comment=reason)
+    print(f"Saved {saved} set records")
 
 
 def main():
@@ -165,7 +144,7 @@ def main():
     args = parser.parse_args()
 
     card_failures = Failures()
-    set_failures = Failures()
+    set_failures = Failures(load_known_errors())
     session = make_session()
     RAW_OUT_DIR.mkdir(parents=True, exist_ok=True)
 

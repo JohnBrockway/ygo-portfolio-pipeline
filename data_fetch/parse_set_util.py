@@ -124,7 +124,7 @@ def get_listed_regions(wikitext):
     return set()
 
 
-def parse_set_page(page):
+def parse_set_page(page, failures):
     """`page` is one of the raw dumps (pageid, title, wikitext, ...).
 
     Returns one record per whitelisted region the set was released in. Raises a
@@ -132,13 +132,16 @@ def parse_set_page(page):
     """
     revisions = page.get("revisions")
     if not revisions:
-        raise NoWikitext()
+        failures.add("absent_or_malformed_wikitext", page_id=page["pageid"], title=page["title"])
+        return []
     wikitext = revisions[0]["slots"]["main"]["content"]
     fields = parse_infobox_set(wikitext)
     if fields is None:
-        raise NoInfobox()
+        failures.add("no_infobox", page_id=page["pageid"], title=page["title"])
+        return []
     if clean(fields.get("appears_in_video_games", "")):
-        raise VideoGameSet(f"Video game set: {clean(fields['appears_in_video_games'])}")
+        failures.add("video_game_set", page_id=page["pageid"], title=page["title"], comment=f"Video game set: {clean(fields['appears_in_video_games'])}")
+        return []
 
     all_dates = get_release_dates(fields)
     prefixes = get_region_values(fields, "prefix")
@@ -147,10 +150,12 @@ def parse_set_page(page):
     # Lists is primary; release-date used to determine regions only if there's no usable Lists field.
     regions = get_listed_regions(wikitext) or set(all_dates)
     if not regions:
-        raise NoRegionDetermined(f"No Lists field or release dates in wikitext")
+        failures.add("no_region", page_id=page["pageid"], title=page["title"], comment="No Lists field or release dates in wikitext")
+        return []
     kept = regions & WHITELISTED_REGIONS
     if not kept:
-        raise UnsupportedRegion(f"No whitelisted region among {sorted(regions)}")
+        failures.add("unsupported_region", page_id=page["pageid"], title=page["title"], comment=f"No whitelisted region among {sorted(regions)}")
+        return []
 
     records = []
     for region in sorted(kept):
@@ -167,22 +172,3 @@ def parse_set_page(page):
             "release_date": pick_release_date(all_dates, region),
         })
     return records
-
-
-class SetParseError(Exception):
-    reason = "parse_error"
-
-class NoWikitext(SetParseError):
-    reason = "absent_or_malformed_wikitext"
-
-class NoInfobox(SetParseError):
-    reason = "no_infobox"
-
-class NoRegionDetermined(SetParseError):
-    reason = "no_region"
-
-class VideoGameSet(SetParseError):
-    reason = "video_game_set"
-
-class UnsupportedRegion(SetParseError):
-    reason = "unsupported_region"
