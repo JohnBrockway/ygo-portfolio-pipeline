@@ -8,7 +8,7 @@ from failures import Failures
 from fetch_set_util import discover_categories, fetch_tree_pages
 from mediawiki_util import make_session, query_pages
 from parse_card_util import parse_card_table_2, get_printings, get_images
-from parse_set_util import parse_set_page
+from parse_set_util import parse_set_page, EDITION_FIELDS
 
 CARD_CATEGORY = "Category:Duel Monsters cards"
 SET_ROOTS = ["Category:Sets"]
@@ -18,6 +18,7 @@ CARD_OUT_DIR = RAW_OUT_DIR / "duel_monsters_cards"
 SET_OUT_DIR = RAW_OUT_DIR / "sets"
 SET_CATEGORIES_FILE = RAW_OUT_DIR / "set_categories.json"
 KNOWN_ERRORS_FILE = Path(__file__).resolve().parent / "../known_set_errors.json"
+EDITION_OVERRIDES_FILE = Path(__file__).resolve().parent / "../edition_overrides.json"
 
 # FALLBACK, kept for posterity: if matching set pages by the set names in the
 # wikitext runs into trouble, add "linkshere" to "prop" below plus
@@ -111,20 +112,67 @@ def load_known_errors(path=KNOWN_ERRORS_FILE):
         return {(entry["page_id"], entry["title"], entry["reason"]) for entry in json.load(f)}
 
 
-def fetch_and_save_sets(session, max_requests, failures):
+def load_edition_overrides(path=EDITION_OVERRIDES_FILE):
+    """{(page_id, title, region): editions} from the curated JSON, validated and in canonical order."""
+    if not path.exists():
+        return {}
+    edition_importance_order = [slug for slug, _ in EDITION_FIELDS]
+    overrides = {}
+    with open(path, encoding="utf-8") as file:
+        for entry in json.load(file):
+            key = (entry["page_id"], entry["title"], entry["region"])
+            if key in overrides or not entry["editions"] or not set(entry["editions"]) <= set(edition_importance_order):
+                raise ValueError(f"Bad or duplicate edition override: {entry}")
+            overrides[key] = sorted(set(entry["editions"]), key=edition_importance_order.index)
+    return overrides
+
+
+def apply_edition_overrides(records, overrides, failures):
+    """Returns records with manual edition overrides filled in if the page listed none.
+
+    Reports what needs attention: records still without editions, overrides whose page now lists
+    editions of its own, and (only if report_unmatched, i.e. this was a full run) overrides that
+    matched no record. Needs the whole run's records; neither argument is modified.
+    """
+    matched, resolved = set(), []
+    for record in records:
+        key = (record["page_id"], record["title"], record["region"])
+        override = overrides.get(key)
+        if override is not None:
+            matched.add(key)
+            if record["editions"] is None:
+                record = {**record, "editions": override}
+            else:
+                failures.add(
+                    "edition_override_page_has_edition",
+                    page_id=record["page_id"],
+                    title=record["title"],
+                    region=record["region"],
+                    comment=f"page now lists {record['editions']}; override says {override}")
+        if record["editions"] is None:
+            failures.add("no_editions", page_id=record["page_id"], title=record["title"], region=record["region"])
+            continue
+        resolved.append(record)
+    for page_id, title, region in sorted(overrides.keys() - matched):
+        failures.add("stale_edition_override", page_id=page_id, title=title, region=region,
+                     comment="matched no record")
+    return resolved
+
+
+def fetch_and_save_sets(session, max_requests, failures, edition_overrides):
     tree = discover_categories(session, SET_ROOTS, EXCLUDED_SET_CATEGORIES)
     write_json_to_file(SET_CATEGORIES_FILE, tree)
     print(f"discovered {len(tree)} set categories (tree saved to {SET_CATEGORIES_FILE})")
 
-    saved = 0
+    records = []
     for page in fetch_tree_pages(session, tree, max_requests):
-        records = parse_set_page(page, failures)
+        records.extend(parse_set_page(page, failures))
 
-        for record in records:
-            write_json_to_file(SET_OUT_DIR / f"{record['page_id']}-{record['region']}.json", record)
-        saved += len(records)
+    records = apply_edition_overrides(records, edition_overrides, failures)
+    for record in records:
+        write_json_to_file(SET_OUT_DIR / f"{record['page_id']}-{record['region']}.json", record)
 
-    print(f"Saved {saved} set records")
+    print(f"Saved {len(records)} set records")
 
 
 def main():
@@ -145,6 +193,7 @@ def main():
 
     card_failures = Failures()
     set_failures = Failures(load_known_errors())
+    edition_overrides = load_edition_overrides()
     session = make_session()
     RAW_OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -154,7 +203,7 @@ def main():
 
     if args.only in (None, "sets"):
         reset_dir(SET_OUT_DIR)
-        fetch_and_save_sets(session, args.max_requests, set_failures)
+        fetch_and_save_sets(session, args.max_requests, set_failures, edition_overrides)
 
     card_failures.write_jsonl(RAW_OUT_DIR / "card_failures.jsonl")
     set_failures.write_jsonl(RAW_OUT_DIR / "set_failures.jsonl")

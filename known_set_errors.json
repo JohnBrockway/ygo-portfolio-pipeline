@@ -2693,5 +2693,17 @@
     {"page_id": 1150871, "title": "Zoodiac Duel Set", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"},
     {"page_id": 1236585, "title": "Duelist Card Protector: Melffy Rabbys", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"},
     {"page_id": 1236843, "title": "Flagship Official Tournament Store Special Tournament Token Pack 2026 Vol.2", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"},
-    {"page_id": 1236588, "title": "Witchcrafter Madame Verre Duel Set", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"}
+    {"page_id": 1236588, "title": "Witchcrafter Madame Verre Duel Set", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"},
+
+    {"page_id": 901988, "title": "Duelist Pack Collection Tin 2007", "reason": "no_editions", "region": "na", "comment": "Super-set with no cards directly referenced"},
+    {"page_id": 288717, "title": "Duelist Pack: Yugi & Kaiba Special Edition", "reason": "no_editions", "region": "na", "comment": "Super-set with no cards directly referenced"},
+    {"page_id": 330057, "title": "EX Value The Gold Box + ABYR&CBLZ", "reason": "no_editions", "region": "jp", "comment": "Super-set with no cards directly referenced"},
+    {"page_id": 330067, "title": "EX Value The Gold Box + GS2013", "reason": "no_editions", "region": "jp", "comment": "Super-set with no cards directly referenced"},
+    {"page_id": 417764, "title": "Premium Collection Value Box", "reason": "no_editions", "region": "na", "comment": "Super-set with no cards directly referenced"},
+    {"page_id": 267823, "title": "Sealed Play Battle Kit 2", "reason": "no_editions", "region": "na", "comment": "Super-set with no cards directly referenced"},
+    {"page_id": 341376, "title": "Sealed Play Battle Kit 3", "reason": "no_editions", "region": "na", "comment": "Super-set with no cards directly referenced"},
+    {"page_id": 309311, "title": "Space-Time Showdown Power Box", "reason": "no_editions", "region": "na", "comment": "Super-set with no cards directly referenced"},
+    {"page_id": 302490, "title": "Starter Deck: Joey Deluxe Edition", "reason": "no_editions", "region": "na", "comment": "Super-set with no cards directly referenced"},
+    {"page_id": 302491, "title": "Starter Deck: Pegasus Deluxe Edition", "reason": "no_editions", "region": "na", "comment": "Super-set with no cards directly referenced"},
+    {"page_id": 366864, "title": "Super Starter: Power Box", "reason": "no_editions", "region": "na", "comment": "Super-set with no cards directly referenced"}
 ]

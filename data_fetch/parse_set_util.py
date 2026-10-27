@@ -20,11 +20,19 @@ LANG_TO_REGION_MAP = {"ja": "jp", "romaji": "jp", "ko": "kr", "es": "sp"}
 REGION_TO_LANG_MAP = {"jp": "ja", "kr": "ko", "sp": "es"}
 # Regions with no `<region>_name` of their own; they reuse another region's names.
 NAME_ALIAS = {"na": "en"}
-# Regions where the release dates aren't (always) directly referred to as <region>_release_date
-# in the infobox. Often when a region has subregions, ex. English sets will have the card list
-# identified by EN, but release dates can be broken down into NA, EU, etc. Fallbacks are tried
-# in order, after and only if the top-level region produces no date
-DATE_FALLBACK = {"en": ["na", "eu", "oc"]}
+# Regions whose data isn't (always) filed under their own code. Often when a region has
+# subregions, ex. English sets will have the card list identified by EN, but release dates and
+# editions can be broken down into NA, EU, etc. Fallbacks are tried in order, after and only if
+# the top-level region produces nothing.
+SOURCE_REGION_FALLBACK = {"en": ["na", "eu"]}
+
+# Edition slugs, each paired with the {{Set navigation}} field that lists the regions that have it.
+# Order is canonical, highest edition first: editions[0] is a set's "best" edition.
+EDITION_FIELDS = [
+    ("1st_edition", "1e_galleries"),
+    ("limited", "le_galleries"),
+    ("unlimited", "ue_galleries"),
+]
 
 INVISIBLE = re.compile("[\u200b-\u200d\u2060\ufeff]")
 
@@ -107,21 +115,46 @@ def get_release_dates(fields):
 
 
 def pick_release_date(all_dates, region):
-    """The region's own date, else the first DATE_FALLBACK region that has one; None if neither."""
-    for source in [region, *DATE_FALLBACK.get(region, [])]:
+    """The region's own date, else the first SOURCE_REGION_FALLBACK region that has one; None if neither."""
+    for source in [region, *SOURCE_REGION_FALLBACK.get(region, [])]:
         if source in all_dates:
             return {**all_dates[source], "source_region": source}
     return None
 
 
-def get_listed_regions(wikitext):
-    """Lowercased region codes from {{Set navigation | lists = EN, NA, JP}}; empty set if absent."""
+def get_set_navigation(wikitext):
+    """{arg name: set of lowercased region codes} from {{Set navigation}}; {} if the template is absent.
+
+    Holds Lists (which regions the set was released in) and the edition fields
+    (1e_galleries, ue_galleries, le_galleries), all written as comma-separated codes.
+    """
     for template in wtp.parse(wikitext).templates:
         if template.name.strip().lower() == "set navigation":
-            for arg in template.arguments:
-                if arg.name.strip() == "lists":
-                    return {c.strip().lower() for c in arg.value.split(",") if c.strip()}
-    return set()
+            return {
+                arg.name.strip(): {c.strip().lower() for c in arg.value.split(",") if c.strip()}
+                for arg in template.arguments
+            }
+    return {}
+
+
+def pick_editions(navigation, region, kept):
+    """Edition slugs for the region, in priority order; None if the page lists no edition for it.
+
+    Tries the region's own code first, then its SOURCE_REGION_FALLBACK regions in order. A fallback
+    region that has a record of its own (is in kept) is skipped: its editions belong to that
+    record, and borrowing them would hide a gap in the data instead of flagging it. (Dates have
+    no such guard; they borrow regardless.)
+    """
+    for source in [region, *SOURCE_REGION_FALLBACK.get(region, [])]:
+        if source != region and source in kept:
+            continue
+        editions = [
+            slug for slug, field in EDITION_FIELDS
+            if source in navigation.get(field, set())
+        ]
+        if editions:
+            return editions
+    return None
 
 
 def parse_set_page(page, failures):
@@ -146,19 +179,20 @@ def parse_set_page(page, failures):
     all_dates = get_release_dates(fields)
     prefixes = get_region_values(fields, "prefix")
     postfixes = get_region_values(fields, "postfix")
+    navigation = get_set_navigation(wikitext)
 
     # Lists is primary; release-date used to determine regions only if there's no usable Lists field.
-    regions = get_listed_regions(wikitext) or set(all_dates)
+    regions = navigation.get("lists") or set(all_dates)
     if not regions:
         failures.add("no_region", page_id=page["pageid"], title=page["title"], comment="No Lists field or release dates in wikitext")
         return []
-    kept = regions & WHITELISTED_REGIONS
-    if not kept:
+    kept_regions = regions & WHITELISTED_REGIONS
+    if not kept_regions:
         failures.add("unsupported_region", page_id=page["pageid"], title=page["title"], comment=f"No whitelisted region among {sorted(regions)}")
         return []
 
     records = []
-    for region in sorted(kept):
+    for region in sorted(kept_regions):
         names = get_all_names(fields, region)
         records.append({
             "page_id": page["pageid"],
@@ -170,5 +204,6 @@ def parse_set_page(page, failures):
             "prefix": prefixes.get(region) or fields.get("prefix") or None,
             "postfix": postfixes.get(region) or fields.get("postfix") or None,
             "release_date": pick_release_date(all_dates, region),
+            "editions": pick_editions(navigation, region, kept_regions),
         })
     return records
