@@ -92,16 +92,14 @@ def build_card_record(card_page):
 
 def fetch_and_save_cards(session, max_requests, failures):
     saved = 0
-    skipped = 0
     for page in query_pages(session, CARD_QUERY_PARAMS, max_requests):
         record = build_card_record(page)
         if record is None:
             failures.add("card_page_unparseable", pageid=page['pageid'])
-            skipped += 1
             continue
         write_json_to_file(CARD_OUT_DIR / f"{record['pageid']}.json", record)
         saved += 1
-    print(f"done: saved {saved} cards to {CARD_OUT_DIR}. ({skipped} skipped)")
+    print(f"Saved {saved} cards to {CARD_OUT_DIR}")
 
 
 def load_known_errors(path=KNOWN_ERRORS_FILE):
@@ -162,7 +160,7 @@ def apply_edition_overrides(records, overrides, failures):
 def fetch_and_save_sets(session, max_requests, failures, edition_overrides):
     tree = discover_categories(session, SET_ROOTS, EXCLUDED_SET_CATEGORIES)
     write_json_to_file(SET_CATEGORIES_FILE, tree)
-    print(f"discovered {len(tree)} set categories (tree saved to {SET_CATEGORIES_FILE})")
+    print(f"Discovered {len(tree)} set categories (tree saved to {SET_CATEGORIES_FILE})")
 
     records = []
     for page in fetch_tree_pages(session, tree, max_requests):

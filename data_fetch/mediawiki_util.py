@@ -121,5 +121,6 @@ def query_pages(session, params, max_requests=None):
     for requests_made, data in enumerate(query(session, params, max_requests), start=1):
         # An empty category comes back with no "query" key at all.
         pages = data.get("query", {}).get("pages", [])
-        print(f"request {requests_made}: {len(pages)} pages")
+        print(f"\rRequest {requests_made}: {len(pages)} pages", end = "")
         yield from pages
+    print("")

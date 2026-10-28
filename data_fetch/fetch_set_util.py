@@ -66,7 +66,8 @@ def discover_categories(session, roots, exclude=(), max_categories=2000):
                     )
                 tree[child] = []
                 queue.append(child)
-        print(f"explored {category} ({len(tree)} known, {len(queue)} queued)")
+        print(f"\rExploring categories: {len(tree)} known, {len(queue)} queued", end = "")
+    print("")
     return tree
 
 
@@ -77,7 +78,7 @@ def fetch_tree_pages(session, categories, max_requests=None):
     """
     seen_ids = set()
     for category in categories:
-        print(f"category: {category}")
+        print(f"{category}")
         params = {
             "redirects": "true",
             "generator": "categorymembers",
