@@ -1,0 +1,144 @@
+"""
+Resolve and download set images so they can be served from owned storage (hotlinking was
+running into CORP and 429 errors from the wiki API).
+
+  1. resolve_image_urls(): one API request per 50 files, asking for the URL of each
+     File: page's image.
+  2. download_images(): fetch each original (one throttled request each), shrink it
+     to a small WebP thumbnail with Pillow, and save only the thumbnail.
+"""
+import io
+import re
+
+import requests
+from PIL import Image
+
+from mediawiki_util import download, query
+
+BATCH_SIZE = 50                 # titles per API request
+THUMB_BOX = (360, 480)          # max width, max height in px
+WEBP_QUALITY = 80
+MAX_CONSECUTIVE_FAILURES = 5    # stop instead of hammering a host that is refusing us
+
+
+def local_image_name(wiki_name):
+    """The wiki file name without any File: prefix, spaces as underscores.
+
+    Returns None for empty or unsafe values.
+    """
+    name = re.sub(r"^(file|image):", "", (wiki_name or "").strip(), flags=re.IGNORECASE)
+    name = name.replace(" ", "_")
+    if not name or "/" in name or "\\" in name or name.startswith("."):
+        return None
+    return name
+
+
+def output_name(name):
+    """File name a thumbnail is saved under. The front end derives URLs by the same rule."""
+    return f"{name}.webp"
+
+
+def resolve_image_urls(session, names, failures):
+    """{name: original image URL or None} for up to BATCH_SIZE local image names.
+
+    Names that don't resolve map to None and are reported to `failures` with the reason.
+    """
+    params = {
+        "titles": "|".join(f"File:{name}" for name in names),
+        "redirects": "true",
+        "prop": "imageinfo",
+        "iiprop": "url|mime",
+    }
+    moves = {}            # title -> title it was normalized / redirected to
+    pages_by_title = {}
+    for data in query(session, params):
+        result = data.get("query", {})
+        for move in result.get("normalized", []) + result.get("redirects", []):
+            moves[move["from"]] = move["to"]
+        for page in result.get("pages", []):
+            pages_by_title[page["title"]] = page
+
+    urls = {}
+    for name in names:
+        title = f"File:{name}"
+        for _ in range(3):  # normalization, then a redirect (or two)
+            title = moves.get(title, title)
+        page = pages_by_title.get(title)
+        info = page.get("imageinfo") if page else None
+        if info:
+            urls[name] = info[0].get("url")
+            continue
+
+        urls[name] = None
+        if page is None:
+            failures.add("image_not_in_response", title=name)
+        elif page.get("invalid"):
+            failures.add("image_invalid_title", title=name, comment=page.get("invalidreason", ""))
+        elif page.get("missing"):
+            failures.add("image_file_missing", title=name)
+        else:
+            failures.add("image_no_imageinfo", title=name)
+    return urls
+
+
+def make_thumbnail(data):
+    """Original image bytes -> WebP thumbnail bytes."""
+    with Image.open(io.BytesIO(data)) as image:
+        if image.mode not in ("RGB", "RGBA"):
+            # Palette and grayscale images: keep transparency if there is any.
+            has_alpha = "transparency" in image.info or "A" in image.mode
+            image = image.convert("RGBA" if has_alpha else "RGB")
+        image.thumbnail(THUMB_BOX, Image.Resampling.LANCZOS)
+        out = io.BytesIO()
+        image.save(out, "WEBP", quality=WEBP_QUALITY, method=6)
+        return out.getvalue()
+
+
+def download_images(session, names, out_dir, failures, max_requests=None):
+    """Download thumbnails for names into out_dir; returns how many were saved."""
+    saved = 0
+    consecutive_failures = 0
+
+    for batch_number, start in enumerate(range(0, len(names), BATCH_SIZE), start=1):
+        if max_requests and batch_number > max_requests:
+            break
+        batch = names[start:start + BATCH_SIZE]
+        urls = resolve_image_urls(session, batch, failures)
+        valid_urls_count = sum(url is not None for url in urls.values())
+        print(f"Batch {batch_number}: {valid_urls_count}/{len(batch)} resolved")
+
+        for name in batch:
+            url = urls[name]
+            if url is None:
+                continue  # failure already reported by resolve_image_urls
+            try:
+                data, content_type = download(session, url)
+            except (requests.RequestException, RuntimeError) as error:
+                failures.add("image_download_failed", title=name, comment=str(error))
+                consecutive_failures += 1
+                if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                    raise RuntimeError(
+                        f"{consecutive_failures} downloads in a row failed (rate limited?); "
+                        "finished files are kept, rerun later to continue"
+                    )
+                continue
+            consecutive_failures = 0
+
+            if not content_type.startswith("image/"):
+                failures.add("image_not_an_image", title=name, comment=content_type)
+                continue
+            try:
+                thumbnail = make_thumbnail(data)
+            except (OSError, ValueError, Image.DecompressionBombError) as error:
+                # e.g. SVGs or corrupt files; the tile falls back to its placeholder
+                failures.add("image_unreadable", title=name, comment=f"{content_type}: {error}")
+                continue
+
+            # Write then rename so an interrupted run never leaves a truncated file behind.
+            path = out_dir / output_name(name)
+            partial = path.with_name(path.name + ".part")
+            partial.write_bytes(thumbnail)
+            partial.replace(path)
+            saved += 1
+
+    return saved

@@ -67,14 +67,14 @@ def _retry_delay(response, attempt):
         return _backoff_delay(attempt)
 
 
-def _get(session, params):
-    """One API call: throttled, retried on 429/5xx/network errors, API errors raised."""
+def _request(session, url, params=None):
+    """One throttled GET, retried on 429/5xx/network errors; returns the response."""
     for attempt in range(MAX_ATTEMPTS):
         _throttle()
         attempt_label = f"attempt {attempt + 1}/{MAX_ATTEMPTS} failed"
 
         try:
-            response = session.get(API_URL, params=params, timeout=60)
+            response = session.get(url, params=params, timeout=60)
         except (requests.ConnectionError, requests.Timeout) as error:
             delay = _backoff_delay(attempt)
             print(f"{attempt_label}: network error ({error}); waiting {delay:.0f}s")
@@ -88,12 +88,23 @@ def _get(session, params):
             continue
 
         response.raise_for_status()
-        data = response.json()
-        if "error" in data:
-            # MediaWiki reports bad requests as HTTP 200 with an "error" object.
-            raise RuntimeError(f"MediaWiki API error: {data['error']}")
-        return data
-    raise RuntimeError(f"giving up after {MAX_ATTEMPTS} attempts: {params}")
+        return response
+    raise RuntimeError(f"giving up after {MAX_ATTEMPTS} attempts: {url} {params}")
+
+
+def _get(session, params):
+    """One API call; API errors raised."""
+    data = _request(session, API_URL, params).json()
+    if "error" in data:
+        # MediaWiki reports bad requests as HTTP 200 with an "error" object.
+        raise RuntimeError(f"MediaWiki API error: {data['error']}")
+    return data
+
+
+def download(session, url):
+    """Download a file (not an API call), with the same throttling and retries. Returns (bytes, content_type)."""
+    response = _request(session, url)
+    return response.content, response.headers.get("Content-Type", "")
 
 
 def query(session, params, max_requests=None):

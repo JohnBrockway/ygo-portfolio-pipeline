@@ -1,10 +1,10 @@
 import argparse
 import json
 import shutil
-from collections import defaultdict
 from pathlib import Path
 
 from failures import Failures
+from fetch_image_util import download_images, local_image_name, output_name
 from fetch_set_util import discover_categories, fetch_tree_pages
 from mediawiki_util import make_session, query_pages
 from parse_card_util import parse_card_table_2, get_printings, get_images
@@ -17,6 +17,7 @@ RAW_OUT_DIR = Path(__file__).resolve().parent / "../data/raw"
 CARD_OUT_DIR = RAW_OUT_DIR / "duel_monsters_cards"
 SET_OUT_DIR = RAW_OUT_DIR / "sets"
 SET_CATEGORIES_FILE = RAW_OUT_DIR / "set_categories.json"
+IMAGE_OUT_DIR = RAW_OUT_DIR / "set_images"
 KNOWN_ERRORS_FILE = Path(__file__).resolve().parent / "../known_set_errors.json"
 EDITION_OVERRIDES_FILE = Path(__file__).resolve().parent / "../edition_overrides.json"
 
@@ -173,6 +174,42 @@ def fetch_and_save_sets(session, max_requests, failures, edition_overrides):
     print(f"Saved {len(records)} set records")
 
 
+def collect_set_image_names(failures):
+    """Unique image names referenced by the saved set records.
+
+    Records with no usable image are reported to failures (keyed by the set's page and region).
+    """
+    if not SET_OUT_DIR.exists():
+        raise SystemExit(f"{SET_OUT_DIR} not found; run with --only sets first.")
+    names = set()
+    for path in sorted(SET_OUT_DIR.glob("*.json")):
+        record = json.loads(path.read_text(encoding="utf-8"))
+        raw = record.get("image")
+        name = local_image_name(raw)
+        if name is not None:
+            names.add(name)
+        elif (raw or "").strip():
+            failures.add("set_image_name_unusable", page_id=record["page_id"], title=record["title"],
+                         region=record["region"], comment=f"image field: {raw!r}")
+        else:
+            failures.add("set_has_no_image", page_id=record["page_id"], title=record["title"],
+                         region=record["region"])
+    print(f"{len(names)} distinct set images referenced")
+    return sorted(names)
+
+
+def fetch_and_save_set_images(session, max_requests, failures):
+    # Deliberately NOT reset_dir(): downloads are slow, so a rerun only fetches what's missing
+    # (delete a file to force a refetch).
+    IMAGE_OUT_DIR.mkdir(parents=True, exist_ok=True)
+    names = collect_set_image_names(failures)
+    todo = [name for name in names if not (IMAGE_OUT_DIR / output_name(name)).exists()]
+    print(f"{len(names) - len(todo)} already downloaded, {len(todo)} to fetch")
+
+    saved = download_images(session, todo, IMAGE_OUT_DIR, failures, max_requests)
+    print(f"Saved {saved} images to {IMAGE_OUT_DIR}")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -180,17 +217,20 @@ def main():
         type=int,
         default=None,
         help="stop after this many API requests (each returns up to 50 pages); "
-             "for sets, applies to each category separately",
+             "for sets, applies to each category separately; "
+             "for images, applies to batches of 50 images",
     )
     parser.add_argument(
         "--only",
-        choices=["cards", "sets"],
-        help="fetch just one of the two (default: both)",
+        choices=["cards", "sets", "images"],
+        help="fetch just one of the three (default: cards and sets; images are slow and "
+             "need the sets fetched first, so they only run when asked for)",
     )
     args = parser.parse_args()
 
     card_failures = Failures()
     set_failures = Failures(load_known_errors())
+    image_failures = Failures()
     edition_overrides = load_edition_overrides()
     session = make_session()
     RAW_OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -198,13 +238,19 @@ def main():
     if args.only in (None, "cards"):
         reset_dir(CARD_OUT_DIR)
         fetch_and_save_cards(session, args.max_requests, card_failures)
+        card_failures.write_jsonl(RAW_OUT_DIR / "card_failures.jsonl")
 
     if args.only in (None, "sets"):
         reset_dir(SET_OUT_DIR)
         fetch_and_save_sets(session, args.max_requests, set_failures, edition_overrides)
+        set_failures.write_jsonl(RAW_OUT_DIR / "set_failures.jsonl")
 
-    card_failures.write_jsonl(RAW_OUT_DIR / "card_failures.jsonl")
-    set_failures.write_jsonl(RAW_OUT_DIR / "set_failures.jsonl")
+    if args.only == "images":
+        try:
+            fetch_and_save_set_images(session, args.max_requests, image_failures)
+        finally:
+            # Also written if the run aborts (e.g. too many failed downloads in a row).
+            image_failures.write_jsonl(RAW_OUT_DIR / "image_failures.jsonl")
 
 
 if __name__ == "__main__":
