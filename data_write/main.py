@@ -27,7 +27,7 @@ import logging
 from pathlib import Path
 
 from failures import Failures
-from data_join_orchestrate import build_master_data
+from orchestrate import build_master_data
 from output_writer import write_master_files
 from record_loading import load_expected_empty, load_records, load_card_id_overrides
 
