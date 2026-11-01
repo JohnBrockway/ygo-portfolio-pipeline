@@ -12,10 +12,14 @@ and the API only returns a category's direct members. So this is two phases:
   2. fetch_tree_pages(): download each discovered category's direct page members with
      wikitext, de-duplicated by pageid (a page can sit in several categories).
 """
+import logging
 import re
 from collections import deque
 
 from mediawiki_util import query, query_pages
+from progress import Progress
+
+log = logging.getLogger(__name__)
 
 
 def normalize_category(title):
@@ -35,6 +39,7 @@ def discover_categories(session, roots, exclude=(), max_categories=2000):
     excluded = {normalize_category(c) for c in exclude}
     tree = {}
     queue = deque()
+    progress = Progress(log)
 
     for root in map(normalize_category, roots):
         if root not in tree and root not in excluded:
@@ -66,8 +71,8 @@ def discover_categories(session, roots, exclude=(), max_categories=2000):
                     )
                 tree[child] = []
                 queue.append(child)
-        print(f"\rExploring categories: {len(tree)} known, {len(queue)} queued", end = "")
-    print("")
+        log.debug("Explored %s (%d known, %d queued)", category, len(tree), len(queue))
+        progress.update("Exploring categories: %d known, %d queued", len(tree), len(queue))
     return tree
 
 
@@ -77,8 +82,12 @@ def fetch_tree_pages(session, categories, max_requests=None):
     `max_requests` caps the API requests spent on EACH category (dev convenience).
     """
     seen_ids = set()
-    for category in categories:
-        print(f"{category}")
+    categories = list(categories)
+    total = len(categories)
+    progress = Progress(log)
+    for index, category in enumerate(categories, start=1):
+        log.debug("Category %d/%d: %s", index, total, category)
+        progress.update("Fetching set pages: category %d/%d, %d pages so far", index, total, len(seen_ids))
         params = {
             "redirects": "true",
             "generator": "categorymembers",
@@ -91,9 +100,11 @@ def fetch_tree_pages(session, categories, max_requests=None):
             "inprop": "url",
         }
         for page in query_pages(session, params, max_requests):
+            progress.update("Fetching set pages: category %d/%d, %d pages so far", index, total, len(seen_ids))
             if "revisions" not in page:
                 continue                    # missing page or a batch without content
             if page["pageid"] in seen_ids:
                 continue
             seen_ids.add(page["pageid"])
             yield page
+    log.info("Fetched %d set pages from %d categories", len(seen_ids), total)

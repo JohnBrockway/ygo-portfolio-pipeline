@@ -3,11 +3,14 @@ Shared plumbing for talking to the Yugipedia (MediaWiki) API: session and User-A
 rate limiting, retries, and following the paging tokens. Every fetcher (cards, sets, ...)
 goes through here so the etiquette and error handling live in one place.
 """
+import logging
 import os
 import time
 
 import requests
 from dotenv import load_dotenv
+
+log = logging.getLogger(__name__)
 
 API_URL = "https://yugipedia.com/api.php"
 EMAIL_KEY = "USER_AGENT_EMAIL"
@@ -77,13 +80,13 @@ def _request(session, url, params=None):
             response = session.get(url, params=params, timeout=60)
         except (requests.ConnectionError, requests.Timeout) as error:
             delay = _backoff_delay(attempt)
-            print(f"{attempt_label}: network error ({error}); waiting {delay:.0f}s")
+            log.warning("%s: network error (%s); waiting %.0fs", attempt_label, error, delay)
             time.sleep(delay)
             continue
 
         if response.status_code in RETRY_STATUSES:
             delay = _retry_delay(response, attempt)
-            print(f"{attempt_label}: HTTP {response.status_code}; waiting {delay:.0f}s")
+            log.warning("%s: HTTP %s; waiting %.0fs", attempt_label, response.status_code, delay)
             time.sleep(delay)
             continue
 
@@ -116,7 +119,7 @@ def query(session, params, max_requests=None):
         requests_made += 1
 
         if "warnings" in data:
-            print("API warnings:", data["warnings"])
+            log.warning("API warnings: %s", data["warnings"])
 
         yield data
 
@@ -132,6 +135,5 @@ def query_pages(session, params, max_requests=None):
     for requests_made, data in enumerate(query(session, params, max_requests), start=1):
         # An empty category comes back with no "query" key at all.
         pages = data.get("query", {}).get("pages", [])
-        print(f"\rRequest {requests_made}: {len(pages)} pages", end = "")
+        log.debug("Request %d: %d pages", requests_made, len(pages))
         yield from pages
-    print("")

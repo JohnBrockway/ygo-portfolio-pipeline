@@ -8,12 +8,16 @@ running into CORP and 429 errors from the wiki API).
      to a small WebP thumbnail with Pillow, and save only the thumbnail.
 """
 import io
+import logging
+import math
 import re
 
 import requests
 from PIL import Image
 
 from mediawiki_util import download, query
+
+log = logging.getLogger(__name__)
 
 BATCH_SIZE = 50                 # titles per API request
 THUMB_BOX = (360, 480)          # max width, max height in px
@@ -99,13 +103,19 @@ def download_images(session, names, out_dir, failures, max_requests=None):
     saved = 0
     consecutive_failures = 0
 
+    total_batches = math.ceil(len(names) / BATCH_SIZE)
+    if max_requests:
+        total_batches = min(total_batches, max_requests)
+
     for batch_number, start in enumerate(range(0, len(names), BATCH_SIZE), start=1):
         if max_requests and batch_number > max_requests:
             break
         batch = names[start:start + BATCH_SIZE]
         urls = resolve_image_urls(session, batch, failures)
         valid_urls_count = sum(url is not None for url in urls.values())
-        print(f"Batch {batch_number}: {valid_urls_count}/{len(batch)} resolved")
+        # One line per batch (about a minute apart) doubles as the progress heartbeat.
+        log.info("Batch %d/%d: %d/%d resolved, %d images saved so far",
+                 batch_number, total_batches, valid_urls_count, len(batch), saved)
 
         for name in batch:
             url = urls[name]

@@ -7,9 +7,13 @@ The set fetch returns its records without writing anything. The image step is th
 exception: it downloads straight into its folder, because it is slow and resumable (a
 rerun only fetches what's missing).
 """
+import logging
+
 from fetch_image_util import download_images, local_image_name, output_name
 from fetch_set_util import discover_categories, fetch_tree_pages
 from parse_set_util import parse_set_page
+
+log = logging.getLogger(__name__)
 
 SET_ROOTS = ["Category:Sets"]
 EXCLUDED_SET_CATEGORIES = ["Category:Set information pages"]
@@ -49,8 +53,9 @@ def apply_edition_overrides(records, overrides, failures):
 
 def fetch_set_records(session, max_requests, failures, edition_overrides):
     """Fetch and parse every set page. Returns (records, category_tree)."""
+    log.info("Discovering set categories")
     tree = discover_categories(session, SET_ROOTS, EXCLUDED_SET_CATEGORIES)
-    print(f"Discovered {len(tree)} set categories")
+    log.info("Discovered %d set categories", len(tree))
 
     records = []
     for page in fetch_tree_pages(session, tree, max_requests):
@@ -76,7 +81,7 @@ def collect_set_image_names(set_records, failures):
         else:
             failures.add("set_has_no_image", page_id=record["page_id"], title=record["title"],
                          region=record["region"])
-    print(f"{len(names)} distinct set images referenced")
+    log.info("%d distinct set images referenced", len(names))
     return sorted(names)
 
 
@@ -86,7 +91,7 @@ def fetch_set_images(session, set_records, image_dir, max_requests, failures):
     image_dir.mkdir(parents=True, exist_ok=True)
     names = collect_set_image_names(set_records, failures)
     todo = [name for name in names if not (image_dir / output_name(name)).exists()]
-    print(f"{len(names) - len(todo)} already downloaded, {len(todo)} to fetch")
+    log.info("%d already downloaded, %d to fetch", len(names) - len(todo), len(todo))
 
     saved = download_images(session, todo, image_dir, failures, max_requests)
-    print(f"Saved {saved} images to {image_dir}")
+    log.info("Saved %d images to %s", saved, image_dir)
