@@ -1,6 +1,6 @@
 """
-Resolve and download set images so they can be served from owned storage (hotlinking was
-running into CORP and 429 errors from the wiki API).
+Resolve and download wiki images (set and card) so they can be served from owned storage
+(hotlinking was running into CORP and 429 errors from the wiki API).
 
   1. resolve_image_urls(): one API request per 50 files, asking for the URL of each
      File: page's image.
@@ -142,8 +142,13 @@ def download_images(session, names, out_dir, failures):
             # Write then rename so an interrupted run never leaves a truncated file behind.
             path = out_dir / output_name(name)
             partial = path.with_name(path.name + ".part")
-            partial.write_bytes(thumbnail)
-            partial.replace(path)
+            try:
+                partial.write_bytes(thumbnail)
+                partial.replace(path)
+            except OSError as error:
+                # e.g. a file name this OS can't store; don't lose a multi-hour run over it
+                failures.add("image_save_failed", title=name, comment=str(error))
+                continue
             saved += 1
 
     return saved

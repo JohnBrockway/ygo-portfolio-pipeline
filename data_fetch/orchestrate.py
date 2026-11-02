@@ -1,11 +1,11 @@
 """
 Composes the fetch steps: pulls raw pages from the wiki and turns them into the records
 that get written to disk. Cards have no composition to do (see fetch_card_util), so this
-holds the set fetch and the image step.
+holds the set fetch and the two image steps (set images and card images).
 
-The set fetch returns its records without writing anything. The image step is the one
-exception: it downloads straight into its folder, because it is slow and resumable (a
-rerun only fetches what's missing).
+The set fetch returns its records without writing anything. The image steps are the
+exception: they download straight into their folders, because they are slow and resumable
+(a rerun only fetches what's missing).
 """
 import logging
 
@@ -85,13 +85,43 @@ def collect_set_image_names(set_records, failures):
     return sorted(names)
 
 
-def fetch_set_images(session, set_records, image_dir, failures):
+def collect_card_image_names(card_records, failures):
+    """Unique image names referenced by the card records.
+
+    card_records can be a generator: one record at a time is enough. Cards with no images,
+    and image entries with no usable file name, are reported to failures.
+    """
+    names = set()
+    for record in card_records:
+        if not record["images"]:
+            failures.add("card_has_no_images", pageid=record["pageid"], title=record["title"])
+            continue
+        for image in record["images"]:
+            name = local_image_name(image["file"])
+            if name is not None:
+                names.add(name)
+            else:
+                failures.add("card_image_name_unusable", pageid=record["pageid"], title=record["title"],
+                             comment=f"image index {image['index']!r}, file field: {image['file']!r}")
+    log.info("%d distinct card images referenced", len(names))
+    return sorted(names)
+
+
+def fetch_images(session, names, image_dir, failures):
+    """Download a thumbnail for every name that isn't already in image_dir."""
     # Deliberately NOT reset_dir(): downloads are slow, so a rerun only fetches what's missing
     # (delete to force a refetch).
     image_dir.mkdir(parents=True, exist_ok=True)
-    names = collect_set_image_names(set_records, failures)
     todo = [name for name in names if not (image_dir / output_name(name)).exists()]
     log.info("%d already downloaded, %d to fetch", len(names) - len(todo), len(todo))
 
     saved = download_images(session, todo, image_dir, failures)
     log.info("Saved %d images to %s", saved, image_dir)
+
+
+def fetch_set_images(session, set_records, image_dir, failures):
+    fetch_images(session, collect_set_image_names(set_records, failures), image_dir, failures)
+
+
+def fetch_card_images(session, card_records, image_dir, failures):
+    fetch_images(session, collect_card_image_names(card_records, failures), image_dir, failures)

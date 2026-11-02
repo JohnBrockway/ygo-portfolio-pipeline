@@ -1,6 +1,6 @@
 """
 Loads the files the fetch steps read: the curated JSONs (known set errors, edition
-overrides) and the set records saved by an earlier run.
+overrides) and the set and card records saved by an earlier run.
 """
 import json
 
@@ -32,8 +32,21 @@ def load_edition_overrides(path):
     return overrides
 
 
-def load_saved_set_records(sets_dir):
-    """The set records an earlier run saved, in file-name order."""
-    if not sets_dir.exists():
-        raise SystemExit(f"{sets_dir} not found; run with --only sets first.")
-    return [json.loads(path.read_text(encoding="utf-8")) for path in sorted(sets_dir.glob("*.json"))]
+def iter_saved_records(records_dir, step):
+    """The records an earlier run of `step` saved, in file-name order, one at a time.
+
+    A generator rather than a list: card records in particular are large (each carries its
+    full printings list) and there are over 14,000 of them. The folder is checked right
+    away, not on first use.
+    """
+    if not records_dir.exists():
+        raise SystemExit(f"{records_dir} not found; run with --steps {step} first.")
+    return (json.loads(path.read_text(encoding="utf-8")) for path in sorted(records_dir.glob("*.json")))
+
+
+def iter_saved_set_records(sets_dir):
+    return iter_saved_records(sets_dir, "sets")
+
+
+def iter_saved_card_records(cards_dir):
+    return iter_saved_records(cards_dir, "cards")

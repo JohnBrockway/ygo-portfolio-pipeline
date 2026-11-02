@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
-main.py - fetch cards, sets and set images from Yugipedia.
+main.py - fetch cards, sets and their images from Yugipedia.
 
 Run from the project root.
 
 Steps (--steps takes one or more, or "all"; they always run in this order, regardless of command line order):
-  cards    one JSON file per card page          -> <raw-out-dir>/duel_monsters_cards
-  sets     one JSON file per set and region     -> <raw-out-dir>/sets (+ set_categories.json)
-  images   a WebP thumbnail per set image       -> <raw-out-dir>/set_images
-           (slow but resumable: files already downloaded are skipped; reads the set files
-           the sets step saved, so those must exist from this run or an earlier one)
+  cards        one JSON file per card page          -> <raw-out-dir>/duel_monsters_cards
+  sets         one JSON file per set and region     -> <raw-out-dir>/sets (+ set_categories.json)
+  set_images   a WebP thumbnail per set image       -> <raw-out-dir>/set_images
+  card_images  a WebP thumbnail per card image      -> <raw-out-dir>/card_images
+               (the image steps are slow but resumable: files already downloaded are skipped;
+               they read the set / card files the earlier steps saved, so those must exist
+               from this run or an earlier one)
 
 Inputs (read from the run folder; required by the sets step, but may be an empty list):
   known_set_errors.json   sets already reviewed and accepted as unparseable
@@ -23,7 +25,8 @@ Outputs (in --raw-out-dir):
 Usage:
   python data_fetch/main.py --raw-out-dir data/raw --steps all
   python data_fetch/main.py --raw-out-dir data/raw --steps cards sets
-  python data_fetch/main.py --raw-out-dir data/raw --steps images
+  python data_fetch/main.py --raw-out-dir data/raw --steps set_images
+  python data_fetch/main.py --raw-out-dir data/raw --steps card_images
 """
 import argparse
 import logging
@@ -31,14 +34,19 @@ from pathlib import Path
 
 from failures import Failures
 from fetch_card_util import fetch_card_records
-from load_inputs import load_edition_overrides, load_known_errors, load_saved_set_records
-from orchestrate import fetch_set_images, fetch_set_records
+from load_inputs import (
+    iter_saved_card_records,
+    iter_saved_set_records,
+    load_edition_overrides,
+    load_known_errors,
+)
+from orchestrate import fetch_card_images, fetch_set_images, fetch_set_records
 from mediawiki_util import make_session
 from raw_output_writer import write_card_records, write_set_categories, write_set_records
 
 log = logging.getLogger("fetch")
 
-STEPS = ("cards", "sets", "images")  # also the order they run in
+STEPS = ("cards", "sets", "set_images", "card_images")  # also the order they run in
 KNOWN_ERRORS_FILE = Path("data_fetch/known_set_errors.json")
 EDITION_OVERRIDES_FILE = Path("data_fetch/edition_overrides.json")
 
@@ -50,8 +58,8 @@ def parse_args():
                         help="folder the raw card, set and image files are written to (created if needed)")
     parser.add_argument(
         "--steps", nargs="+", required=True, choices=[*STEPS, "all"], metavar="STEP",
-        help="steps to run: cards, sets, images, or all. They always run in the order "
-             "cards, sets, images, because images reads the set files the sets step saves",
+        help="steps to run: cards, sets, set_images, card_images, or all. They always run in "
+             "that order, because the image steps read the files the cards and sets steps save",
     )
     return parser.parse_args()
 
@@ -87,7 +95,8 @@ def main():
     steps = set(STEPS) if "all" in args.steps else set(args.steps)
     run_cards = "cards" in steps
     run_sets = "sets" in steps
-    run_images = "images" in steps
+    run_set_images = "set_images" in steps
+    run_card_images = "card_images" in steps
 
     raw_dir = Path(args.raw_out_dir)
     raw_dir.mkdir(parents=True, exist_ok=True)
@@ -97,7 +106,8 @@ def main():
     card_dir = raw_dir / "duel_monsters_cards"
     set_dir = raw_dir / "sets"
     set_categories_file = raw_dir / "set_categories.json"
-    image_dir = raw_dir / "set_images"
+    set_image_dir = raw_dir / "set_images"
+    card_image_dir = raw_dir / "card_images"
 
     # Required inputs are loaded up front, so a missing file fails before any fetching starts.
     if run_sets:
@@ -119,15 +129,23 @@ def main():
         write_set_records(set_dir, set_records)
         save_failures(set_failures, raw_dir / "set_failures.jsonl")
 
-    if run_images:
-        image_failures = Failures()
+    if run_set_images:
+        set_image_failures = Failures()
         # Read from disk, so this works the same after a sets step in this run or an earlier run.
-        saved_set_records = load_saved_set_records(set_dir)
+        saved_set_records = iter_saved_set_records(set_dir)
         try:
-            fetch_set_images(session, saved_set_records, image_dir, image_failures)
+            fetch_set_images(session, saved_set_records, set_image_dir, set_image_failures)
         finally:
             # Also written if the run aborts (e.g. too many failed downloads in a row).
-            save_failures(image_failures, raw_dir / "image_failures.jsonl")
+            save_failures(set_image_failures, raw_dir / "set_image_failures.jsonl")
+
+    if run_card_images:
+        card_image_failures = Failures()
+        saved_card_records = iter_saved_card_records(card_dir)
+        try:
+            fetch_card_images(session, saved_card_records, card_image_dir, card_image_failures)
+        finally:
+            save_failures(card_image_failures, raw_dir / "card_image_failures.jsonl")
 
     log.info("DONE; full log in %s", log_path)
 
