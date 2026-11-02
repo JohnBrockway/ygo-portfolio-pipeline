@@ -39,10 +39,13 @@ def verify_numeral(string):
     return None
 
 
-def build_card_record(card_page):
+def build_card_record(card_page, failures):
     """
     Turn a raw card page into a JSON record to save, or None if it's not parsable with
     the expected template.
+
+    Problems with individual image rows are reported to failures; the rest of the
+    record is still returned.
     """
     revisions = card_page.get("revisions")
     if not revisions:
@@ -62,7 +65,7 @@ def build_card_record(card_page):
         "password": password,
         "konami_id": konami_id,
         "card_type": card_fields.get("card_type", "Monster"),
-        "images": get_images(card_fields["image"]) if "image" in card_fields else [],
+        "images": get_images(card_fields.get("image"), failures, card_page["pageid"], card_page["title"]),
         "printings": get_printings(card_fields),
     }
 
@@ -70,7 +73,7 @@ def build_card_record(card_page):
 def fetch_card_records(session, failures):
     """Yield one record per parsable card page; pages that can't be parsed go to failures."""
     for page in query_pages(session, CARD_QUERY_PARAMS):
-        record = build_card_record(page)
+        record = build_card_record(page, failures)
         if record is None:
             failures.add("card_page_unparseable", pageid=page['pageid'])
             continue

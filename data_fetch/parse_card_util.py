@@ -58,27 +58,31 @@ def parse_sets_for_region(sets_field, region):
     return printings
 
 
-def get_images(image_field):
-    """Turn the image field into a list of rows.
+def get_images(image_field, failures, pageid, title):
+    """Turn the image field into a list of {"index", "file", "art_only"} entries.
 
-    Each line looks like: index; card image file; art-only file (optional)
-    A page with a single image may instead just be one filename with no semicolons.
+    Each line looks like: index; card image file; a bool indicating whether the image is art (square)
+    or a full card.
+
+    Each row uses the art-only file if it has one (art_only True), otherwise the full card
+    image (art_only False), the same rule the wiki uses. Rows with neither file are
+    reported to failures (keyed by the card's pageid and title) and left out.
     """
     if not image_field:
         return []
     if ";" not in image_field:
-        return [{"index": "1", "card_image": image_field, "art_image": None}]
+        return [{"index": "1", "file": image_field, "art_only": False}]
 
-    rows = []
+    images = []
     for line in image_field.splitlines():
         if ";" not in line:
             continue
         index, card_image, art_image = split_fields(line, 3)
-        rows.append(
-            {
-                "index": index,
-                "card_image": card_image or None,
-                "art_image": art_image or None,
-            }
-        )
-    return rows
+        if art_image:
+            images.append({"index": index, "file": art_image, "art_only": True})
+        elif card_image:
+            images.append({"index": index, "file": card_image, "art_only": False})
+        else:
+            failures.add("card_image_row_blank", pageid=pageid, title=title,
+                         comment=f"image row {index!r} has neither a card image nor an art image")
+    return images

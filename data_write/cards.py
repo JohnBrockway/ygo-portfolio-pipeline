@@ -34,23 +34,6 @@ def choose_card_id(card):
     return None
 
 
-def pick_card_images(card):
-    """One entry per image row: the art-only file if there is one, else the full card image.
-    (Same logic the wiki uses.)"""
-    images = []
-    for image in card.get("images") or []:
-        art_file = image.get("art_image")
-        full_file = image.get("card_image")
-        if not art_file and not full_file:
-            continue
-        images.append({
-            "index": image.get("index"),
-            "file": art_file or full_file,
-            "art_only": bool(art_file),
-        })
-    return images
-
-
 def build_card_record(card_id, card):
     return {
         "card_id": card_id,
@@ -60,5 +43,5 @@ def build_card_record(card_id, card):
         "konami_id": clean_id(card.get("konami_id")),
         "password": clean_id(card.get("password")),
         "card_type": card.get("card_type"),
-        "images": pick_card_images(card),
+        "images": card.get("images", []),  # already one {"index", "file", "art_only"} per image
     }
