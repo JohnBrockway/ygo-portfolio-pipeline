@@ -76,11 +76,8 @@ def discover_categories(session, roots, exclude=(), max_categories=2000):
     return tree
 
 
-def fetch_tree_pages(session, categories, max_requests=None):
-    """Yield direct page members of each category, once per pageid.
-
-    `max_requests` caps the API requests spent on EACH category (dev convenience).
-    """
+def fetch_tree_pages(session, categories):
+    """Yield direct page members of each category, once per pageid."""
     seen_ids = set()
     categories = list(categories)
     total = len(categories)
@@ -99,7 +96,7 @@ def fetch_tree_pages(session, categories, max_requests=None):
             "rvslots": "main",
             "inprop": "url",
         }
-        for page in query_pages(session, params, max_requests):
+        for page in query_pages(session, params):
             progress.update("Fetching set pages: category %d/%d, %d pages so far", index, total, len(seen_ids))
             if "revisions" not in page:
                 continue                    # missing page or a batch without content

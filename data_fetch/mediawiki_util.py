@@ -110,13 +110,11 @@ def download(session, url):
     return response.content, response.headers.get("Content-Type", "")
 
 
-def query(session, params, max_requests=None):
+def query(session, params):
     """Yield each API response for a query, following the API's paging tokens."""
     params = {**DEFAULT_PARAMS, **params}
-    requests_made = 0
     while True:
         data = _get(session, params)
-        requests_made += 1
 
         if "warnings" in data:
             log.warning("API warnings: %s", data["warnings"])
@@ -125,14 +123,12 @@ def query(session, params, max_requests=None):
 
         if "continue" not in data:
             break
-        if max_requests and requests_made >= max_requests:
-            break
         params.update(data["continue"])
 
 
-def query_pages(session, params, max_requests=None):
+def query_pages(session, params):
     """Like query(), but yield the individual pages (for generator=... queries)."""
-    for requests_made, data in enumerate(query(session, params, max_requests), start=1):
+    for requests_made, data in enumerate(query(session, params), start=1):
         # An empty category comes back with no "query" key at all.
         pages = data.get("query", {}).get("pages", [])
         log.debug("Request %d: %d pages", requests_made, len(pages))

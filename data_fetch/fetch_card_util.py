@@ -67,9 +67,9 @@ def build_card_record(card_page):
     }
 
 
-def fetch_card_records(session, max_requests, failures):
+def fetch_card_records(session, failures):
     """Yield one record per parsable card page; pages that can't be parsed go to failures."""
-    for page in query_pages(session, CARD_QUERY_PARAMS, max_requests):
+    for page in query_pages(session, CARD_QUERY_PARAMS):
         record = build_card_record(page)
         if record is None:
             failures.add("card_page_unparseable", pageid=page['pageid'])

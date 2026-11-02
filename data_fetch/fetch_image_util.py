@@ -98,18 +98,13 @@ def make_thumbnail(data):
         return out.getvalue()
 
 
-def download_images(session, names, out_dir, failures, max_requests=None):
+def download_images(session, names, out_dir, failures):
     """Download thumbnails for names into out_dir; returns how many were saved."""
     saved = 0
     consecutive_failures = 0
-
     total_batches = math.ceil(len(names) / BATCH_SIZE)
-    if max_requests:
-        total_batches = min(total_batches, max_requests)
 
     for batch_number, start in enumerate(range(0, len(names), BATCH_SIZE), start=1):
-        if max_requests and batch_number > max_requests:
-            break
         batch = names[start:start + BATCH_SIZE]
         urls = resolve_image_urls(session, batch, failures)
         valid_urls_count = sum(url is not None for url in urls.values())

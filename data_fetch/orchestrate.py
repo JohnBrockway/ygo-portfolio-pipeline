@@ -51,14 +51,14 @@ def apply_edition_overrides(records, overrides, failures):
     return resolved
 
 
-def fetch_set_records(session, max_requests, failures, edition_overrides):
+def fetch_set_records(session, failures, edition_overrides):
     """Fetch and parse every set page. Returns (records, category_tree)."""
     log.info("Discovering set categories")
     tree = discover_categories(session, SET_ROOTS, EXCLUDED_SET_CATEGORIES)
     log.info("Discovered %d set categories", len(tree))
 
     records = []
-    for page in fetch_tree_pages(session, tree, max_requests):
+    for page in fetch_tree_pages(session, tree):
         records.extend(parse_set_page(page, failures))
 
     return apply_edition_overrides(records, edition_overrides, failures), tree
@@ -85,7 +85,7 @@ def collect_set_image_names(set_records, failures):
     return sorted(names)
 
 
-def fetch_set_images(session, set_records, image_dir, max_requests, failures):
+def fetch_set_images(session, set_records, image_dir, failures):
     # Deliberately NOT reset_dir(): downloads are slow, so a rerun only fetches what's missing
     # (delete to force a refetch).
     image_dir.mkdir(parents=True, exist_ok=True)
@@ -93,5 +93,5 @@ def fetch_set_images(session, set_records, image_dir, max_requests, failures):
     todo = [name for name in names if not (image_dir / output_name(name)).exists()]
     log.info("%d already downloaded, %d to fetch", len(names) - len(todo), len(todo))
 
-    saved = download_images(session, todo, image_dir, failures, max_requests)
+    saved = download_images(session, todo, image_dir, failures)
     log.info("Saved %d images to %s", saved, image_dir)
