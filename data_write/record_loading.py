@@ -75,3 +75,11 @@ def load_card_id_overrides(path):
         overrides[pageid] = entry
 
     return overrides
+
+def load_image_index(path):
+    """{wiki file name: thumbnail file name} written by the fetch step's image steps.
+
+    The file must exist (an empty object is fine).
+    """
+    with open(path, encoding="utf-8") as file:
+        return json.load(file)

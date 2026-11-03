@@ -11,8 +11,9 @@ def is_expected_empty(set_record, expected_empty):
     return (set_record["set_id"], set_record["title"]) in expected_empty
 
 
-def build_set_record(set_record, printing_count):
-    return {
+def build_set_record(set_record, printing_count, image_index, failures):
+    """The master set record. `thumb` (the thumbnail's file name) is only present if one was downloaded."""
+    record = {
         "set_id": set_record["set_id"],
         "page_id": set_record.get("page_id"),
         "title": set_record["title"],
@@ -27,8 +28,16 @@ def build_set_record(set_record, printing_count):
         "printing_count": printing_count,
     }
 
+    thumb = image_index.get(set_record.get("image"))
+    if thumb is None:
+        failures.add("set_image_missing_thumbnail", set_id=set_record["set_id"],
+                     title=set_record["title"], region=set_record["region"])
+    else:
+        record["thumb"] = thumb
+    return record
 
-def build_set_records(set_index, printings, expected_empty, failures):
+
+def build_set_records(set_index, printings, expected_empty, image_index, failures):
     """Final set records, sorted by set_id.
 
     Sets with no printings are dropped. Two cases are logged so the
@@ -54,6 +63,6 @@ def build_set_records(set_index, printings, expected_empty, failures):
                          printing_count=printing_count)
 
         if printing_count > 0:
-            set_records.append(build_set_record(set_record, printing_count))
+            set_records.append(build_set_record(set_record, printing_count, image_index, failures))
 
     return set_records

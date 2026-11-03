@@ -5,6 +5,9 @@ build_backend.py - join card printings to set records and write the master datas
 Inputs (JSON files, one record per file or a list per file; searched recursively):
   --cards-dir   card records  (pageid, title, konami_id, password, printings[...], images[...])
   --sets-dir    set records   (page_id, title, region, name, names, image, prefix, release_date ...)
+  --card-image-index  JSON written by the fetch card_images step: {wiki file name: thumbnail file name}
+  --set-image-index   JSON written by the fetch set_images step, same shape
+                    Images with no entry get no "thumb" field in the master data (and are reported).
   --expected-empty  optional JSON: [{"set_id": "1001672-jp", "title": "Set Page Title"}, ...]. Sets 
                     we already know have no printings. set_id and title must both match exactly.
                     A set with no printings is flagged (unexpected_empty_set) if it is NOT listed here.
@@ -20,7 +23,9 @@ Outputs (in --out-dir):
   build.log                               full log
 
 Usage:
-  python build_master.py --cards-dir data/raw/duel_monsters_cards --sets-dir data/raw/sets --out-dir out [--pretty]
+  python build_master.py --cards-dir data/raw/duel_monsters_cards --sets-dir data/raw/sets \
+      --card-image-index data/raw/card_image_index.json --set-image-index data/raw/set_image_index.json \
+      --out-dir out [--pretty]
 """
 import argparse
 import logging
@@ -29,7 +34,7 @@ from pathlib import Path
 from failures import Failures
 from orchestrate import build_master_data
 from output_writer import write_master_files
-from record_loading import load_expected_empty, load_records, load_card_id_overrides
+from record_loading import load_expected_empty, load_image_index, load_records, load_card_id_overrides
 
 log = logging.getLogger("build_master")
 
@@ -39,6 +44,8 @@ def parse_args():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--cards-dir", required=True)
     parser.add_argument("--sets-dir", required=True)
+    parser.add_argument("--card-image-index", required=True)
+    parser.add_argument("--set-image-index", required=True)
     parser.add_argument("--out-dir", default="out")
     parser.add_argument("--expected-empty", default="expected_empty_sets.json")
     parser.add_argument("--known-duplicate-cards", default="known_duplicate_cards.json")
@@ -73,8 +80,11 @@ def main():
     set_records = load_records(args.sets_dir, "set", failures)
     expected_empty = load_expected_empty(args.expected_empty)
     known_duplicate_cards = load_card_id_overrides(args.known_duplicate_cards)
+    card_image_index = load_image_index(args.card_image_index)
+    set_image_index = load_image_index(args.set_image_index)
 
-    master = build_master_data(card_records, set_records, expected_empty, known_duplicate_cards, failures)
+    master = build_master_data(card_records, set_records, expected_empty, known_duplicate_cards,
+                               card_image_index, set_image_index, failures)
     counts = write_master_files(out_dir, master, failures, pretty=args.pretty)
 
     log.info("DONE %s", counts)

@@ -34,7 +34,24 @@ def choose_card_id(card):
     return None
 
 
-def build_card_record(card_id, card):
+def build_card_images(card_id, card, image_index, failures):
+    """The card's images, each with `thumb` (the thumbnail's file name) if one was downloaded.
+
+    Images with no thumbnail are kept, without the field, and reported.
+    """
+    images = []
+    for image in card.get("images", []):
+        thumb = image_index.get(image["file"])
+        if thumb is None:
+            failures.add("card_image_missing_thumbnail", card_id=card_id, title=card.get("title"),
+                         index=image["index"], file=image["file"])
+            images.append(image)
+        else:
+            images.append({**image, "thumb": thumb})
+    return images
+
+
+def build_card_record(card_id, card, image_index, failures):
     return {
         "card_id": card_id,
         "pageid": card.get("pageid"),
@@ -43,5 +60,5 @@ def build_card_record(card_id, card):
         "konami_id": clean_id(card.get("konami_id")),
         "password": clean_id(card.get("password")),
         "card_type": card.get("card_type"),
-        "images": card.get("images", []),  # already one {"index", "file", "art_only"} per image
+        "images": build_card_images(card_id, card, image_index, failures),
     }

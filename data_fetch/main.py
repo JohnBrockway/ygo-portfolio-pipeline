@@ -7,11 +7,12 @@ Run from the project root.
 Steps (--steps takes one or more, or "all"; they always run in this order, regardless of command line order):
   cards        one JSON file per card page          -> <raw-out-dir>/duel_monsters_cards
   sets         one JSON file per set and region     -> <raw-out-dir>/sets (+ set_categories.json)
-  set_images   a WebP thumbnail per set image       -> <raw-out-dir>/set_images
-  card_images  a WebP thumbnail per card image      -> <raw-out-dir>/card_images
+  set_images   a WebP thumbnail per set image       -> <raw-out-dir>/set_images (+ set_image_index.json)
+  card_images  a WebP thumbnail per card image      -> <raw-out-dir>/card_images (+ card_image_index.json)
                (the image steps are slow but resumable: files already downloaded are skipped;
                they read the set / card files the earlier steps saved, so those must exist
-               from this run or an earlier one)
+               from this run or an earlier one. The index files say which wiki file names have
+               a thumbnail, and are rewritten at the end of every image run, even a short one.)
 
 Inputs (read from the run folder; required by the sets step, but may be an empty list):
   known_set_errors.json   sets already reviewed and accepted as unparseable
@@ -107,7 +108,9 @@ def main():
     set_dir = raw_dir / "sets"
     set_categories_file = raw_dir / "set_categories.json"
     set_image_dir = raw_dir / "set_images"
+    set_image_index_file = raw_dir / "set_image_index.json"
     card_image_dir = raw_dir / "card_images"
+    card_image_index_file = raw_dir / "card_image_index.json"
 
     # Required inputs are loaded up front, so a missing file fails before any fetching starts.
     if run_sets:
@@ -134,7 +137,7 @@ def main():
         # Read from disk, so this works the same after a sets step in this run or an earlier run.
         saved_set_records = iter_saved_set_records(set_dir)
         try:
-            fetch_set_images(session, saved_set_records, set_image_dir, set_image_failures)
+            fetch_set_images(session, saved_set_records, set_image_dir, set_image_index_file, set_image_failures)
         finally:
             # Also written if the run aborts (e.g. too many failed downloads in a row).
             save_failures(set_image_failures, raw_dir / "set_image_failures.jsonl")
@@ -143,7 +146,8 @@ def main():
         card_image_failures = Failures()
         saved_card_records = iter_saved_card_records(card_dir)
         try:
-            fetch_card_images(session, saved_card_records, card_image_dir, card_image_failures)
+            fetch_card_images(session, saved_card_records, card_image_dir, card_image_index_file,
+                              card_image_failures)
         finally:
             save_failures(card_image_failures, raw_dir / "card_image_failures.jsonl")
 

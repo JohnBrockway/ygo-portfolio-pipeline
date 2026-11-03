@@ -5,11 +5,11 @@ holds the set fetch and the two image steps (set images and card images).
 
 The set fetch returns its records without writing anything. The image steps are the
 exception: they download straight into their folders, because they are slow and resumable
-(a rerun only fetches what's missing).
+(a rerun only fetches what's missing). Each also writes an index of the thumbnails on disk.
 """
 import logging
 
-from fetch_image_util import download_images, local_image_name, output_name
+from fetch_image_util import download_images, local_image_name, output_name, write_image_index
 from fetch_set_util import discover_categories, fetch_tree_pages
 from parse_set_util import parse_set_page
 
@@ -65,33 +65,35 @@ def fetch_set_records(session, failures, edition_overrides):
 
 
 def collect_set_image_names(set_records, failures):
-    """Unique image names referenced by the set records.
+    """{wiki file name: local name} for the images the set records reference.
 
+    The wiki name is exactly as the record spells it, which is how the master build looks it up.
     Records with no usable image are reported to failures (keyed by the set's page and region).
     """
-    names = set()
+    names = {}
     for record in set_records:
         raw = record.get("image")
         name = local_image_name(raw)
         if name is not None:
-            names.add(name)
+            names[raw] = name
         elif (raw or "").strip():
             failures.add("set_image_name_unusable", page_id=record["page_id"], title=record["title"],
                          region=record["region"], comment=f"image field: {raw!r}")
         else:
             failures.add("set_has_no_image", page_id=record["page_id"], title=record["title"],
                          region=record["region"])
-    log.info("%d distinct set images referenced", len(names))
-    return sorted(names)
+    log.info("%d distinct set images referenced", len(set(names.values())))
+    return names
 
 
 def collect_card_image_names(card_records, failures):
-    """Unique image names referenced by the card records.
+    """{wiki file name: local name} for the images the card records reference.
 
+    The wiki name is exactly as the record spells it, which is how the master build looks it up.
     card_records can be a generator: one record at a time is enough. Cards with no images,
     and image entries with no usable file name, are reported to failures.
     """
-    names = set()
+    names = {}
     for record in card_records:
         if not record["images"]:
             failures.add("card_has_no_images", pageid=record["pageid"], title=record["title"])
@@ -99,29 +101,46 @@ def collect_card_image_names(card_records, failures):
         for image in record["images"]:
             name = local_image_name(image["file"])
             if name is not None:
-                names.add(name)
+                names[image["file"]] = name
             else:
                 failures.add("card_image_name_unusable", pageid=record["pageid"], title=record["title"],
                              comment=f"image index {image['index']!r}, file field: {image['file']!r}")
-    log.info("%d distinct card images referenced", len(names))
-    return sorted(names)
+    log.info("%d distinct card images referenced", len(set(names.values())))
+    return names
 
 
-def fetch_images(session, names, image_dir, failures):
-    """Download a thumbnail for every name that isn't already in image_dir."""
+def fetch_images(session, names_by_wiki_name, image_dir, index_path, failures):
+    """Download a thumbnail for every name that isn't already in image_dir, then write the index."""
     # Deliberately NOT reset_dir(): downloads are slow, so a rerun only fetches what's missing
     # (delete to force a refetch).
     image_dir.mkdir(parents=True, exist_ok=True)
-    todo = [name for name in names if not (image_dir / output_name(name)).exists()]
-    log.info("%d already downloaded, %d to fetch", len(names) - len(todo), len(todo))
+    local_names = sorted(set(names_by_wiki_name.values()))
+    todo = [name for name in local_names if not (image_dir / output_name(name)).exists()]
+    log.info("%d already downloaded, %d to fetch", len(local_names) - len(todo), len(todo))
 
-    saved = download_images(session, todo, image_dir, failures)
+    try:
+        saved = download_images(session, todo, image_dir, failures)
+    finally:
+        # Also written if the run aborts: the thumbnails that did finish are still valid.
+        write_image_index(index_path, names_by_wiki_name, image_dir)
     log.info("Saved %d images to %s", saved, image_dir)
 
 
-def fetch_set_images(session, set_records, image_dir, failures):
-    fetch_images(session, collect_set_image_names(set_records, failures), image_dir, failures)
+def fetch_set_images(session, set_records, image_dir, index_path, failures):
+    fetch_images(
+        session,
+        collect_set_image_names(set_records, failures),
+        image_dir,
+        index_path,
+        failures
+    )
 
 
-def fetch_card_images(session, card_records, image_dir, failures):
-    fetch_images(session, collect_card_image_names(card_records, failures), image_dir, failures)
+def fetch_card_images(session, card_records, image_dir, index_path, failures):
+    fetch_images(
+        session,
+        collect_card_image_names(card_records, failures),
+        image_dir,
+        index_path,
+        failures
+    )

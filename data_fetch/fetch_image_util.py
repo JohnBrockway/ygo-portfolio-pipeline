@@ -6,8 +6,11 @@ Resolve and download wiki images (set and card) so they can be served from owned
      File: page's image.
   2. download_images(): fetch each original (one throttled request each), shrink it
      to a small WebP thumbnail with Pillow, and save only the thumbnail.
+  3. write_image_index(): record which wiki file names have a thumbnail on disk, and what
+     it's called. The master build reads this instead of repeating the naming rule.
 """
 import io
+import json
 import logging
 import math
 import re
@@ -38,7 +41,7 @@ def local_image_name(wiki_name):
 
 
 def output_name(name):
-    """File name a thumbnail is saved under. The front end derives URLs by the same rule."""
+    """File name a thumbnail is saved under."""
     return f"{name}.webp"
 
 
@@ -152,3 +155,19 @@ def download_images(session, names, out_dir, failures):
             saved += 1
 
     return saved
+
+
+def write_image_index(index_path, names_by_wiki_name, image_dir):
+    """Write {wiki file name: thumbnail file name} for every name whose thumbnail is on disk.
+
+    names_by_wiki_name maps each wiki file name as the records spell it to its local name.
+    Names without a thumbnail are left out, which is how the master build knows they have none.
+    """
+    index = {}
+    for wiki_name, name in names_by_wiki_name.items():
+        thumbnail = output_name(name)
+        if (image_dir / thumbnail).exists():
+            index[wiki_name] = thumbnail
+    with open(index_path, "w", encoding="utf-8") as file:
+        json.dump(index, file, ensure_ascii=False, indent=1, sort_keys=True)
+    log.info("Wrote %d of %d image names to %s", len(index), len(names_by_wiki_name), index_path)
