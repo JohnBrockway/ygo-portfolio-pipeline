@@ -109,12 +109,32 @@ def collect_card_image_names(card_records, failures):
     return names
 
 
+def find_stale_images(local_names, image_dir):
+    """Names of the files in image_dir that none of local_names accounts for, sorted.
+
+    Includes leftover .part files from interrupted downloads.
+    """
+    expected = {output_name(name) for name in local_names}
+    return sorted(path.name for path in image_dir.iterdir() if path.is_file() and path.name not in expected)
+
+
 def fetch_images(session, names_by_wiki_name, image_dir, index_path, failures):
-    """Download a thumbnail for every name that isn't already in image_dir, then write the index."""
+    """Download a thumbnail for every name that isn't already in image_dir, then write the index.
+
+    Files in image_dir that no record references are reported as stale, not deleted.
+    """
     # Deliberately NOT reset_dir(): downloads are slow, so a rerun only fetches what's missing
     # (delete to force a refetch).
     image_dir.mkdir(parents=True, exist_ok=True)
     local_names = sorted(set(names_by_wiki_name.values()))
+
+    stale = find_stale_images(local_names, image_dir)
+    for file_name in stale:
+        failures.add("stale_image_file", file=file_name)
+    if stale:
+        log.info("%d files in %s are not referenced by any record (see the failures file)",
+                 len(stale), image_dir)
+
     todo = [name for name in local_names if not (image_dir / output_name(name)).exists()]
     log.info("%d already downloaded, %d to fetch", len(local_names) - len(todo), len(todo))
 
