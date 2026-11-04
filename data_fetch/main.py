@@ -5,7 +5,9 @@ main.py - fetch cards, sets and their images from Yugipedia.
 Run from the project root.
 
 Steps (--steps takes one or more, or "all"; they always run in this order, regardless of command line order):
-  cards        one JSON file per card page          -> <raw-out-dir>/duel_monsters_cards
+  cards        one JSON file per card page, one folder per game:    -> <raw-out-dir>/duel_monsters_cards
+                                                                    -> <raw-out-dir>/rush_duel_cards
+               (see CARD_CATEGORIES; each record says which game it is from)
   sets         one JSON file per set and region     -> <raw-out-dir>/sets (+ set_categories.json)
   set_images   a WebP thumbnail per set image       -> <raw-out-dir>/set_images (+ set_image_index.json)
   card_images  a WebP thumbnail per card image      -> <raw-out-dir>/card_images (+ card_image_index.json)
@@ -31,10 +33,11 @@ Usage:
 """
 import argparse
 import logging
+from itertools import chain
 from pathlib import Path
 
 from failures import Failures
-from fetch_card_util import fetch_card_records
+from fetch_card_util import CARD_CATEGORIES, fetch_card_records
 from load_inputs import (
     iter_saved_card_records,
     iter_saved_set_records,
@@ -104,7 +107,6 @@ def main():
     log_path = raw_dir / "fetch.log"
     setup_logging(log_path)
 
-    card_dir = raw_dir / "duel_monsters_cards"
     set_dir = raw_dir / "sets"
     set_categories_file = raw_dir / "set_categories.json"
     set_image_dir = raw_dir / "set_images"
@@ -120,10 +122,11 @@ def main():
     session = make_session()
 
     if run_cards:
-        log.info("Fetching cards")
         card_failures = Failures()
-        cards = fetch_card_records(session, card_failures)
-        write_card_records(card_dir, cards)
+        for source in CARD_CATEGORIES:
+            log.info("Fetching cards: %s", source["category"])
+            cards = fetch_card_records(session, source["category"], source["game"], card_failures)
+            write_card_records(raw_dir / (source["game"] + "_cards"), cards)
         save_failures(card_failures, raw_dir / "card_failures.jsonl")
 
     if run_sets:
@@ -144,7 +147,11 @@ def main():
 
     if run_card_images:
         card_image_failures = Failures()
-        saved_card_records = iter_saved_card_records(card_dir)
+        # One stream of records across every game's folder. Chaining like this makes 
+        # each folder's existence check run here, before any fetching starts.
+        saved_card_records = chain.from_iterable(
+            [iter_saved_card_records(raw_dir / (source["game"] + "_cards")) for source in CARD_CATEGORIES]
+        )
         try:
             fetch_card_images(session, saved_card_records, card_image_dir, card_image_index_file,
                               card_image_failures)
