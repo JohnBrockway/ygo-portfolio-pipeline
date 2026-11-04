@@ -83,6 +83,6 @@ def get_images(image_field, failures, pageid, title):
         elif card_image:
             images.append({"index": index, "file": card_image, "art_only": False})
         else:
-            failures.add("card_image_row_blank", pageid=pageid, title=title,
+            failures.add("card_image_row_blank", page_id=pageid, title=title,
                          comment=f"image row {index!r} has neither a card image nor an art image")
     return images

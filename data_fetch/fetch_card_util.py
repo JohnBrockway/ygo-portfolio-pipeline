@@ -92,6 +92,6 @@ def fetch_card_records(session, category, game, failures):
     for page in query_pages(session, card_query_params(category)):
         record = build_card_record(page, game, failures)
         if record is None:
-            failures.add("card_page_unparseable", pageid=page['pageid'], title=page.get('title'))
+            failures.add("card_page_unparseable", page_id=page['pageid'], title=page.get('title'))
             continue
         yield record

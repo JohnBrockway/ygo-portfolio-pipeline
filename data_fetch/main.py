@@ -16,9 +16,10 @@ Steps (--steps takes one or more, or "all"; they always run in this order, regar
                from this run or an earlier one. The index files say which wiki file names have
                a thumbnail, and are rewritten at the end of every image run, even a short one.)
 
-Inputs (read from the run folder; required by the sets step, but may be an empty list):
-  known_set_errors.json   sets already reviewed and accepted as unparseable
-  edition_overrides.json  curated editions for set pages that list none
+Inputs (required by the step named, but each may be an empty list):
+  known_card_errors.json  (cards step) card pages already reviewed and accepted as unparseable
+  known_set_errors.json   (sets step) sets already reviewed and accepted as unparseable
+  edition_overrides.json  (sets step) curated editions for set pages that list none
 
 Outputs (in --raw-out-dir):
   <step>_failures.jsonl   one line per failure/warning for that step, so running one step
@@ -51,7 +52,8 @@ from raw_output_writer import write_card_records, write_set_categories, write_se
 log = logging.getLogger("fetch")
 
 STEPS = ("cards", "sets", "set_images", "card_images")  # also the order they run in
-KNOWN_ERRORS_FILE = Path("data_fetch/known_set_errors.json")
+KNOWN_CARD_ERRORS_FILE = Path("data_fetch/known_card_errors.json")
+KNOWN_SET_ERRORS_FILE = Path("data_fetch/known_set_errors.json")
 EDITION_OVERRIDES_FILE = Path("data_fetch/edition_overrides.json")
 
 
@@ -115,14 +117,15 @@ def main():
     card_image_index_file = raw_dir / "card_image_index.json"
 
     # Required inputs are loaded up front, so a missing file fails before any fetching starts.
+    if run_cards:
+        card_failures = Failures(load_known_errors(KNOWN_CARD_ERRORS_FILE))
     if run_sets:
-        set_failures = Failures(load_known_errors(KNOWN_ERRORS_FILE))
+        set_failures = Failures(load_known_errors(KNOWN_SET_ERRORS_FILE))
         edition_overrides = load_edition_overrides(EDITION_OVERRIDES_FILE)
 
     session = make_session()
 
     if run_cards:
-        card_failures = Failures()
         for source in CARD_CATEGORIES:
             log.info("Fetching cards: %s", source["category"])
             cards = fetch_card_records(session, source["category"], source["game"], card_failures)
