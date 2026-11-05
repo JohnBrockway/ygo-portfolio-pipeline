@@ -1,4 +1,4 @@
-"""Reading the raw card/set JSON files and the expected-empty-sets list."""
+"""Reading the raw card/set JSON files and the curated lists (known errors, card id overrides)."""
 import json
 import logging
 from pathlib import Path
@@ -41,24 +41,32 @@ def load_records(path, record_type, failures):
     return records
 
 
-def load_expected_empty(path):
-    """Sets we already know have no printings, as a set of (set_id, title) tuples.
+def load_known_errors(path):
+    """Failures we've already reviewed and accepted, as a list of fingerprint dicts.
 
-    The file is a list of objects like {"set_id": "1001672-jp", "title": "Some Set Page"}. 
-    Extra keys (e.g. a "note") are ignored. A missing file just means nothing is expected to be empty.
-    An entry without both keys raises ValueError, since that is a mistake in the file itself.
+    The file is a list of objects, each a failure line from failures.jsonl cut down to the
+    fields that identify it, e.g. {"kind": "empty_set", "set_id": "1001672-jp", "title": "Some Set Page"}.
+    "comment" is a free-text note and is dropped. A missing file just means no known errors.
+    An entry that isn't an object, has no "kind", has nothing but "kind" (it would silence a
+    whole kind of failure), or repeats another entry raises ValueError, since that is a
+    mistake in the file itself.
     """
     if not path or not Path(path).exists():
-        return set()
+        return []
 
     entries = json.loads(Path(path).read_text(encoding="utf-8"))
 
-    expected_empty = set()
+    known_errors = []
     for entry in entries:
-        if not isinstance(entry, dict) or "set_id" not in entry or "title" not in entry:
-            raise ValueError(f'{path}: expected {{"set_id": ..., "title": ...}}, got {entry!r}')
-        expected_empty.add((entry["set_id"], entry["title"]))
-    return expected_empty
+        if not isinstance(entry, dict):
+            raise ValueError(f"{path}: expected an object, got {entry!r}")
+        fingerprint = {field: value for field, value in entry.items() if field != "comment"}
+        if "kind" not in fingerprint or len(fingerprint) < 2:
+            raise ValueError(f'{path}: expected "kind" plus at least one more field, got {entry!r}')
+        if fingerprint in known_errors:
+            raise ValueError(f"{path}: duplicate known error {entry!r}")
+        known_errors.append(fingerprint)
+    return known_errors
 
 def load_card_id_overrides(path):
     """Load the manual card id overrides, keyed by wiki pageid."""

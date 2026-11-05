@@ -2,15 +2,6 @@
 from collections import Counter
 
 
-def is_expected_empty(set_record, expected_empty):
-    """True if the set's (set_id, title) pair is on the expected-empty list.
-
-    Both must match exactly, so a set that merely shares a title or an id
-    with a listed one is still flagged.
-    """
-    return (set_record["set_id"], set_record["title"]) in expected_empty
-
-
 def build_set_record(set_record, printing_count, image_index, failures):
     """The master set record. `thumb` (the thumbnail's file name) is only present if one was downloaded."""
     record = {
@@ -37,32 +28,24 @@ def build_set_record(set_record, printing_count, image_index, failures):
     return record
 
 
-def build_set_records(set_index, printings, expected_empty, image_index, failures):
+def build_set_records(set_index, printings, image_index, failures):
     """Final set records, sorted by set_id.
 
-    Sets with no printings are dropped. Two cases are logged so the
-    expected-empty list stays accurate:
-      unexpected_empty_set              no printings, but not on the expected-empty list
-      expected_empty_set_has_printings  on the expected-empty list, but has printings now
-                                        (the set is kept, and can come off the list)
+    Sets with no printings are dropped and logged as empty_set. Sets we've already
+    reviewed and accepted as empty go in the known-errors file, which Failures applies;
+    if such a set gains printings it stops being logged, and Failures reports its
+    entry as stale.
     """
     printing_counts = Counter(printing["set_id"] for printing in printings)
     set_records = []
 
     for set_id, set_record in sorted(set_index.sets_by_id.items()):
         printing_count = printing_counts[set_id]
-        is_listed_as_empty = is_expected_empty(set_record, expected_empty)
 
-        if printing_count == 0 and not is_listed_as_empty:
-            failures.add("unexpected_empty_set", set_id=set_id,
+        if printing_count == 0:
+            failures.add("empty_set", set_id=set_id,
                          title=set_record["title"], region=set_record["region"])
-
-        if printing_count > 0 and is_listed_as_empty:
-            failures.add("expected_empty_set_has_printings", set_id=set_id,
-                         title=set_record["title"], region=set_record["region"],
-                         printing_count=printing_count)
-
-        if printing_count > 0:
+        else:
             set_records.append(build_set_record(set_record, printing_count, image_index, failures))
 
     return set_records

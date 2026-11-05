@@ -81,13 +81,13 @@ def report_stale_overrides(known_duplicate_cards, seen_duplicate_pageids,
                          title=known_duplicate_cards[pageid]["title"], natural_id=natural_id)
 
 
-def build_master_data(card_records, set_records, expected_empty, known_duplicate_cards,
+def build_master_data(card_records, set_records, known_duplicate_cards,
                       card_image_index, set_image_index, failures):
     set_index = SetIndex(set_records, failures)
     cards_by_id, resolved_printings = collect_cards(card_records, set_index, known_duplicate_cards,
                                                     card_image_index, failures)
     printings = build_printing_records(resolved_printings, failures)
-    sets = build_set_records(set_index, printings, expected_empty, set_image_index, failures)
+    sets = build_set_records(set_index, printings, set_image_index, failures)
 
     set_index.report_unused_aliases(failures)
 

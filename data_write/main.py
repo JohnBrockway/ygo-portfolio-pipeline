@@ -9,11 +9,14 @@ Inputs (JSON files, one record per file or a list per file; searched recursively
   --card-image-index  JSON written by the fetch card_images step: {wiki file name: thumbnail file name}
   --set-image-index   JSON written by the fetch set_images step, same shape
                     Images with no entry get no "thumb" field in the master data (and are reported).
-  --expected-empty  optional JSON: [{"set_id": "1001672-jp", "title": "Set Page Title"}, ...]. Sets 
-                    we already know have no printings. set_id and title must both match exactly.
-                    A set with no printings is flagged (unexpected_empty_set) if it is NOT listed here.
-                    A listed set that DOES have printings is flagged
-                    (expected_empty_set_has_printings), so it can be removed from the list.
+  --known-errors    JSON list of failures already reviewed and accepted, so they are not logged
+                    (a missing file means none are known). Each entry is a failure line from
+                    failures.jsonl cut down to the fields that identify it, always including "kind",
+                    e.g. {"kind": "empty_set", "set_id": "1001672-jp", "title": "Set Page Title"}.
+                    A failure matches an entry when it has every one of the entry's fields with the
+                    same value, so list enough fields to pin down exactly the failure you reviewed.
+                    "comment" is a free-text note and is never matched. An entry that matches nothing
+                    in a run is reported as stale_known_error, so it can be removed.
 
 
 
@@ -37,11 +40,11 @@ from pathlib import Path
 from failures import Failures
 from orchestrate import build_master_data
 from output_writer import write_master_files
-from record_loading import load_expected_empty, load_image_index, load_records, load_card_id_overrides
+from record_loading import load_image_index, load_known_errors, load_records, load_card_id_overrides
 
 log = logging.getLogger("build_master")
 
-EXPECTED_EMPTY_SETS_FILE = Path("data_write/expected_empty_sets.json")
+KNOWN_BUILD_ERRORS_FILE = Path("data_write/known_build_errors.json")
 KNOWN_DUPLICATE_CARDS_FILE = Path("data_write/known_duplicate_cards.json")
 
 
@@ -80,18 +83,17 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     setup_logging(out_dir)
 
-    failures = Failures()
+    failures = Failures(load_known_errors(KNOWN_BUILD_ERRORS_FILE))
     # Every folder's records in one list; each record says which game it belongs to.
     card_records = list(chain.from_iterable(
         load_records(cards_dir, "card", failures) for cards_dir in args.cards_dir
     ))
     set_records = load_records(args.sets_dir, "set", failures)
-    expected_empty = load_expected_empty(EXPECTED_EMPTY_SETS_FILE)
     known_duplicate_cards = load_card_id_overrides(KNOWN_DUPLICATE_CARDS_FILE)
     card_image_index = load_image_index(args.card_image_index)
     set_image_index = load_image_index(args.set_image_index)
 
-    master = build_master_data(card_records, set_records, expected_empty, known_duplicate_cards,
+    master = build_master_data(card_records, set_records, known_duplicate_cards,
                                card_image_index, set_image_index, failures)
     counts = write_master_files(out_dir, master, failures, pretty=args.pretty)
 
