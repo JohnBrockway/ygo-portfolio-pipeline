@@ -56,6 +56,7 @@ def build_card_record(card_id, card, image_index, failures):
         "card_id": card_id,
         "pageid": card.get("pageid"),
         "title": card.get("title"),
+        "game": card["game"],
         "name_ja": card.get("name_ja"),
         "konami_id": clean_id(card.get("konami_id")),
         "password": clean_id(card.get("password")),

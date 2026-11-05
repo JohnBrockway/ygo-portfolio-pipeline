@@ -3,7 +3,8 @@
 build_backend.py - join card printings to set records and write the master dataset.
 
 Inputs (JSON files, one record per file or a list per file; searched recursively):
-  --cards-dir   card records  (pageid, title, konami_id, password, printings[...], images[...])
+  --cards-dir   one or more folders of card records, one folder per game
+                (pageid, title, game, konami_id, password, printings[...], images[...])
   --sets-dir    set records   (page_id, title, region, name, names, image, prefix, release_date ...)
   --card-image-index  JSON written by the fetch card_images step: {wiki file name: thumbnail file name}
   --set-image-index   JSON written by the fetch set_images step, same shape
@@ -23,12 +24,14 @@ Outputs (in --out-dir):
   build.log                               full log
 
 Usage:
-  python build_master.py --cards-dir data/raw/duel_monsters_cards --sets-dir data/raw/sets \
-      --card-image-index data/raw/card_image_index.json --set-image-index data/raw/set_image_index.json \
+  python main.py --cards-dir data/duel_monsters_cards data/rush_duel_cards \
+      --sets-dir data/sets \
+      --card-image-index data/card_image_index.json --set-image-index data/set_image_index.json \
       --out-dir out [--pretty]
 """
 import argparse
 import logging
+from itertools import chain
 from pathlib import Path
 
 from failures import Failures
@@ -42,7 +45,8 @@ log = logging.getLogger("build_master")
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--cards-dir", required=True)
+    parser.add_argument("--cards-dir", required=True, nargs="+",
+                        help="one or more folders of card records, e.g. one per game")
     parser.add_argument("--sets-dir", required=True)
     parser.add_argument("--card-image-index", required=True)
     parser.add_argument("--set-image-index", required=True)
@@ -76,7 +80,10 @@ def main():
     setup_logging(out_dir)
 
     failures = Failures()
-    card_records = load_records(args.cards_dir, "card", failures)
+    # Every folder's records in one list; each record says which game it belongs to.
+    card_records = list(chain.from_iterable(
+        load_records(cards_dir, "card", failures) for cards_dir in args.cards_dir
+    ))
     set_records = load_records(args.sets_dir, "set", failures)
     expected_empty = load_expected_empty(args.expected_empty)
     known_duplicate_cards = load_card_id_overrides(args.known_duplicate_cards)
