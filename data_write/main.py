@@ -41,6 +41,9 @@ from record_loading import load_expected_empty, load_image_index, load_records, 
 
 log = logging.getLogger("build_master")
 
+EXPECTED_EMPTY_SETS_FILE = Path("data_write/expected_empty_sets.json")
+KNOWN_DUPLICATE_CARDS_FILE = Path("data_write/known_duplicate_cards.json")
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__,
@@ -51,8 +54,6 @@ def parse_args():
     parser.add_argument("--card-image-index", required=True)
     parser.add_argument("--set-image-index", required=True)
     parser.add_argument("--out-dir", default="out")
-    parser.add_argument("--expected-empty", default="expected_empty_sets.json")
-    parser.add_argument("--known-duplicate-cards", default="known_duplicate_cards.json")
     parser.add_argument("--pretty", action="store_true",
                         help="indent JSON (dev only; bigger files)")
     return parser.parse_args()
@@ -85,8 +86,8 @@ def main():
         load_records(cards_dir, "card", failures) for cards_dir in args.cards_dir
     ))
     set_records = load_records(args.sets_dir, "set", failures)
-    expected_empty = load_expected_empty(args.expected_empty)
-    known_duplicate_cards = load_card_id_overrides(args.known_duplicate_cards)
+    expected_empty = load_expected_empty(EXPECTED_EMPTY_SETS_FILE)
+    known_duplicate_cards = load_card_id_overrides(KNOWN_DUPLICATE_CARDS_FILE)
     card_image_index = load_image_index(args.card_image_index)
     set_image_index = load_image_index(args.set_image_index)
 
