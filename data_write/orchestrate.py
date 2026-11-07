@@ -87,7 +87,7 @@ def build_master_data(card_records, set_records, known_duplicate_cards,
     cards_by_id, resolved_printings = collect_cards(card_records, set_index, known_duplicate_cards,
                                                     card_image_index, failures)
     printings = build_printing_records(resolved_printings, failures)
-    sets = build_set_records(set_index, printings, set_image_index, failures)
+    sets = build_set_records(set_index, printings, cards_by_id, set_image_index, failures)
 
     set_index.report_unused_aliases(failures)
 
