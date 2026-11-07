@@ -5,7 +5,7 @@ holds the set fetch and the two image steps (set images and card images).
 
 The set fetch returns its records without writing anything. The image steps are the
 exception: they download straight into their folders, because they are slow and resumable
-(a rerun only fetches what's missing). Each also writes an index of the thumbnails on disk.
+(a rerun only fetches what's missing). Each also writes an index of the image files on disk.
 """
 import logging
 
@@ -119,7 +119,7 @@ def find_stale_images(local_names, image_dir):
 
 
 def fetch_images(session, names_by_wiki_name, image_dir, index_path, failures):
-    """Download a thumbnail for every name that isn't already in image_dir, then write the index.
+    """Download an image for every name that isn't already in image_dir, then write the index.
 
     Files in image_dir that no record references are reported as stale, not deleted.
     """
@@ -141,7 +141,7 @@ def fetch_images(session, names_by_wiki_name, image_dir, index_path, failures):
     try:
         saved = download_images(session, todo, image_dir, failures)
     finally:
-        # Also written if the run aborts: the thumbnails that did finish are still valid.
+        # Also written if the run aborts: the images that did finish are still valid.
         write_image_index(index_path, names_by_wiki_name, image_dir)
     log.info("Saved %d images to %s", saved, image_dir)
 

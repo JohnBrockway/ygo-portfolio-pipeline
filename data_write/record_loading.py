@@ -85,7 +85,7 @@ def load_card_id_overrides(path):
     return overrides
 
 def load_image_index(path):
-    """{wiki file name: thumbnail file name} written by the fetch step's image steps.
+    """{wiki file name: image file name} written by the fetch step's image steps.
 
     The file must exist (an empty object is fine).
     """

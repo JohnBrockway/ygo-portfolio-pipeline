@@ -35,19 +35,19 @@ def choose_card_id(card):
 
 
 def build_card_images(card_id, card, image_index, failures):
-    """The card's images, each with `thumb` (the thumbnail's file name) if one was downloaded.
+    """The card's images, each with `file` set to the image file's name in our storage.
 
-    Images with no thumbnail are kept, without the field, and reported.
+    The raw record's `file` is the wiki file name; the image index maps it to the file we
+    downloaded. An image we have no file for keeps its entry, with `file` set to None, and
+    is reported.
     """
     images = []
     for image in card.get("images", []):
-        thumb = image_index.get(image["file"])
-        if thumb is None:
-            failures.add("card_image_missing_thumbnail", card_id=card_id, title=card.get("title"),
+        file = image_index.get(image["file"])
+        if file is None:
+            failures.add("card_image_missing", card_id=card_id, title=card.get("title"),
                          index=image["index"], file=image["file"])
-            images.append(image)
-        else:
-            images.append({**image, "thumb": thumb})
+        images.append({**image, "file": file})
     return images
 
 

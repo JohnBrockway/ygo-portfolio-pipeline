@@ -6,9 +6,10 @@ Inputs (JSON files, one record per file or a list per file; searched recursively
   --cards-dir   one or more folders of card records, one folder per game
                 (pageid, title, game, konami_id, password, printings[...], images[...])
   --sets-dir    set records   (page_id, title, region, name, names, image, prefix, release_date ...)
-  --card-image-index  JSON written by the fetch card_images step: {wiki file name: thumbnail file name}
+  --card-image-index  JSON written by the fetch card_images step: {wiki file name: image file name}
   --set-image-index   JSON written by the fetch set_images step, same shape
-                    Images with no entry get no "thumb" field in the master data (and are reported).
+                    Images with no entry get a null "file" (cards) or "image" (sets) in the
+                    master data (and are reported).
   --known-errors    JSON list of failures already reviewed and accepted, so they are not logged
                     (a missing file means none are known). Each entry is a failure line from
                     failures.jsonl cut down to the fields that identify it, always including "kind",

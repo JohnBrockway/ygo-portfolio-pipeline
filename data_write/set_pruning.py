@@ -16,8 +16,13 @@ def find_set_games(printings, cards_by_id):
 
 
 def build_set_record(set_record, printing_count, games, image_index, failures):
-    """The master set record. `thumb` (the thumbnail's file name) is only present if one was downloaded."""
-    record = {
+    """The master set record. `image` is the image file's name in our storage, or None if we have none."""
+    image = image_index.get(set_record.get("image"))
+    if image is None:
+        failures.add("set_image_missing", set_id=set_record["set_id"],
+                     title=set_record["title"], region=set_record["region"])
+
+    return {
         "set_id": set_record["set_id"],
         "page_id": set_record.get("page_id"),
         "title": set_record["title"],
@@ -25,21 +30,13 @@ def build_set_record(set_record, printing_count, games, image_index, failures):
         "games": games,
         "name": set_record.get("name"),
         "names": set_record.get("names"),
-        "image": set_record.get("image"),
+        "image": image,
         "prefix": set_record.get("prefix"),
         "postfix": set_record.get("postfix"),
         "release_date": set_record.get("release_date"),
         "editions": set_record["editions"],
         "printing_count": printing_count,
     }
-
-    thumb = image_index.get(set_record.get("image"))
-    if thumb is None:
-        failures.add("set_image_missing_thumbnail", set_id=set_record["set_id"],
-                     title=set_record["title"], region=set_record["region"])
-    else:
-        record["thumb"] = thumb
-    return record
 
 
 def build_set_records(set_index, printings, cards_by_id, image_index, failures):

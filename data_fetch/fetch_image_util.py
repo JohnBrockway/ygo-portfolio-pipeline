@@ -5,8 +5,8 @@ Resolve and download wiki images (set and card) so they can be served from owned
   1. resolve_image_urls(): one API request per 50 files, asking for the URL of each
      File: page's image.
   2. download_images(): fetch each original (one throttled request each), shrink it
-     to a small WebP thumbnail with Pillow, and save only the thumbnail.
-  3. write_image_index(): record which wiki file names have a thumbnail on disk, and what
+     to fit MAX_IMAGE_SIZE as a WebP with Pillow, and save only the WebP.
+  3. write_image_index(): record which wiki file names have an image on disk, and what
      it's called. The master build reads this instead of repeating the naming rule.
 """
 import io
@@ -23,7 +23,7 @@ from mediawiki_util import download, query
 log = logging.getLogger(__name__)
 
 BATCH_SIZE = 50                 # titles per API request
-THUMB_BOX = (360, 480)          # max width, max height in px
+MAX_IMAGE_SIZE = (360, 480)     # max width, max height in px
 WEBP_QUALITY = 80
 MAX_CONSECUTIVE_FAILURES = 5    # stop instead of hammering a host that is refusing us
 
@@ -41,7 +41,7 @@ def local_image_name(wiki_name):
 
 
 def output_name(name):
-    """File name a thumbnail is saved under."""
+    """File name an image is saved under."""
     return f"{name}.webp"
 
 
@@ -88,21 +88,21 @@ def resolve_image_urls(session, names, failures):
     return urls
 
 
-def make_thumbnail(data):
-    """Original image bytes -> WebP thumbnail bytes."""
+def shrink_to_webp(data):
+    """Original image bytes -> WebP image bytes, shrunk to fit MAX_IMAGE_SIZE."""
     with Image.open(io.BytesIO(data)) as image:
         if image.mode not in ("RGB", "RGBA"):
             # Palette and grayscale images: keep transparency if there is any.
             has_alpha = "transparency" in image.info or "A" in image.mode
             image = image.convert("RGBA" if has_alpha else "RGB")
-        image.thumbnail(THUMB_BOX, Image.Resampling.LANCZOS)
+        image.thumbnail(MAX_IMAGE_SIZE, Image.Resampling.LANCZOS)
         out = io.BytesIO()
         image.save(out, "WEBP", quality=WEBP_QUALITY, method=6)
         return out.getvalue()
 
 
 def download_images(session, names, out_dir, failures):
-    """Download thumbnails for names into out_dir; returns how many were saved."""
+    """Download images for names into out_dir; returns how many were saved."""
     saved = 0
     consecutive_failures = 0
     total_batches = math.ceil(len(names) / BATCH_SIZE)
@@ -136,7 +136,7 @@ def download_images(session, names, out_dir, failures):
                 failures.add("image_not_an_image", title=name, comment=content_type)
                 continue
             try:
-                thumbnail = make_thumbnail(data)
+                webp_data = shrink_to_webp(data)
             except (OSError, ValueError, Image.DecompressionBombError) as error:
                 # e.g. SVGs or corrupt files; the tile falls back to its placeholder
                 failures.add("image_unreadable", title=name, comment=f"{content_type}: {error}")
@@ -146,7 +146,7 @@ def download_images(session, names, out_dir, failures):
             path = out_dir / output_name(name)
             partial = path.with_name(path.name + ".part")
             try:
-                partial.write_bytes(thumbnail)
+                partial.write_bytes(webp_data)
                 partial.replace(path)
             except OSError as error:
                 # e.g. a file name this OS can't store; don't lose a multi-hour run over it
@@ -158,16 +158,16 @@ def download_images(session, names, out_dir, failures):
 
 
 def write_image_index(index_path, names_by_wiki_name, image_dir):
-    """Write {wiki file name: thumbnail file name} for every name whose thumbnail is on disk.
+    """Write {wiki file name: image file name} for every name whose image is on disk.
 
     names_by_wiki_name maps each wiki file name as the records spell it to its local name.
-    Names without a thumbnail are left out, which is how the master build knows they have none.
+    Names without an image are left out, which is how the master build knows they have none.
     """
     index = {}
     for wiki_name, name in names_by_wiki_name.items():
-        thumbnail = output_name(name)
-        if (image_dir / thumbnail).exists():
-            index[wiki_name] = thumbnail
+        image_name = output_name(name)
+        if (image_dir / image_name).exists():
+            index[wiki_name] = image_name
     with open(index_path, "w", encoding="utf-8") as file:
         json.dump(index, file, ensure_ascii=False, indent=1, sort_keys=True)
     log.info("Wrote %d of %d image names to %s", len(index), len(names_by_wiki_name), index_path)

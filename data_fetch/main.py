@@ -9,12 +9,12 @@ Steps (--steps takes one or more, or "all"; they always run in this order, regar
                                                                     -> <raw-out-dir>/rush_duel_cards
                (see CARD_CATEGORIES; each record says which game it is from)
   sets         one JSON file per set and region     -> <raw-out-dir>/sets (+ set_categories.json)
-  set_images   a WebP thumbnail per set image       -> <raw-out-dir>/set_images (+ set_image_index.json)
-  card_images  a WebP thumbnail per card image      -> <raw-out-dir>/card_images (+ card_image_index.json)
+  set_images   a WebP image per set image                           -> <raw-out-dir>/set_images (+ set_image_index.json)
+  card_images  a WebP image per card image                          -> <raw-out-dir>/card_images (+ card_image_index.json)
                (the image steps are slow but resumable: files already downloaded are skipped;
                they read the set / card files the earlier steps saved, so those must exist
                from this run or an earlier one. The index files say which wiki file names have
-               a thumbnail, and are rewritten at the end of every image run, even a short one.)
+               an image, and are rewritten at the end of every image run, even a short one.)
 
 Inputs (required by the step named, but each may be an empty list):
   known_card_errors.json  (cards step) card pages already reviewed and accepted as unparseable
