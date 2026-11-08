@@ -1,8 +1,13 @@
-"""Turning a card's raw printings into master printing records.
+"""Turning a card's raw printings into master records.
+
+A setcode is one card's entry in one set under one set number (e.g. "15AX-JPM01").
+Its printings are the versions of that card with that set number, which differ
+by rarity (and art, though that's TODO).
 
 Two steps:
   1. resolve_card_printings: match each raw printing to a set record (one result per rarity).
-  2. build_printing_records: give every resolved printing its final set number and id.
+  2. build_printing_records: give every resolved printing its final set number and id,
+     and group printings that share a setcode.
 """
 from collections import defaultdict
 
@@ -27,8 +32,8 @@ def resolve_card_printings(card_id, card_title, raw_printings, set_index, failur
 
         # What gets logged if anything goes wrong with this printing.
         description = {
-            "card_id": card_id, 
-            "card": card_title, 
+            "card_id": card_id,
+            "card": card_title,
             "region": region,
             "set_name": set_name,
             "set_number": set_number
@@ -94,41 +99,67 @@ def make_set_number(printing, positions):
     return f"{prefix}--{position:03d}", True
 
 
-def make_printing_id(printing, set_number, is_synthetic):
-    """card : set : number : rarity.
+def make_setcode_id(printing, set_number, is_synthetic):
+    """card : set : number.
 
     Synthetic numbers are left out of the id (replaced by "nonum") so the id
     stays stable if the alphabetical ordering shifts later.
     """
     number_part = "nonum" if is_synthetic else set_number.replace("/", "_")
+    return f"{printing['card_id']}:{printing['set']['set_id']}:{number_part}"
+
+
+def make_printing_id(printing, setcode_id):
+    """setcode id : rarity."""
     rarity_part = slugify(printing["rarity"]) if printing["rarity"] else "none"
-    return f"{printing['card_id']}:{printing['set']['set_id']}:{number_part}:{rarity_part}"
+    return f"{setcode_id}:{rarity_part}"
 
 
 def build_printing_records(resolved_printings, failures):
-    """The final printing records, sorted by printing_id. Duplicate ids are logged and skipped."""
+    """The final setcode records, sorted by setcode_id.
+
+    One record per card, set and set number, listing its distinct printings
+    sorted by printing_id. Duplicate printing ids are logged and skipped, and so
+    are printings whose set number would share a setcode id with a different set number.
+    """
     positions = synthetic_number_positions(resolved_printings)
-    records = []
-    seen_ids = set()
+    setcodes = {}
+    seen_printing_ids = set()
 
     for printing in resolved_printings:
         set_record = printing["set"]
         set_number, is_synthetic = make_set_number(printing, positions)
-        printing_id = make_printing_id(printing, set_number, is_synthetic)
+        setcode_id = make_setcode_id(printing, set_number, is_synthetic)
+        printing_id = make_printing_id(printing, setcode_id)
 
-        if printing_id in seen_ids:
+        setcode = setcodes.get(setcode_id)
+        if setcode is not None and setcode["set_number"] != set_number:
+            # Different set numbers that make the same id.
+            # Adding this printing would merge two setcodes into one.
+            failures.add("duplicate_setcode_id", setcode_id=setcode_id, card=printing["card_title"],
+                         set=set_record["title"], set_number=set_number,
+                         other_set_number=setcode["set_number"], rarity=printing["rarity"])
+            continue
+
+        if printing_id in seen_printing_ids:
             failures.add("duplicate_printing", printing_id=printing_id, card=printing["card_title"],
                          set=set_record["title"], set_number=set_number, rarity=printing["rarity"])
             continue
-        seen_ids.add(printing_id)
+        seen_printing_ids.add(printing_id)
 
-        records.append({
-            "printing_id": printing_id,
-            "card_id": printing["card_id"],
-            "set_id": set_record["set_id"],
-            "set_number": set_number,
-            "set_number_synthetic": is_synthetic,
-            "rarity": printing["rarity"],
-        })
+        if setcode is None:
+            setcode = {
+                "setcode_id": setcode_id,
+                "card_id": printing["card_id"],
+                "set_id": set_record["set_id"],
+                "set_number": set_number,
+                "set_number_synthetic": is_synthetic,
+                "printings": [],
+            }
+            setcodes[setcode_id] = setcode
+        setcode["printings"].append({"printing_id": printing_id, "rarity": printing["rarity"]})
 
-    return sorted(records, key=lambda record: record["printing_id"])
+    records = sorted(setcodes.values(), key=lambda record: record["setcode_id"])
+    for record in records:
+        record["printings"].sort(key=lambda printing: printing["printing_id"])
+    return records

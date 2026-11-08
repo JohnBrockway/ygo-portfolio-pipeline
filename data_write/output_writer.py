@@ -31,7 +31,8 @@ def write_master_files(out_dir, master, failures, pretty=False):
     counts = {
         "cards": len(master.cards),
         "sets": len(master.sets),
-        "printings": len(master.printings),
+        "setcodes": len(master.printings),
+        "printings": sum(len(setcode["printings"]) for setcode in master.printings),
     }
 
     # The manifest lets clients cache-bust: each file's hash changes when its content does.

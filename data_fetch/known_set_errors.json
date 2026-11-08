@@ -875,6 +875,9 @@
     {"page_id": 188810, "title": "Turbo Pack", "reason": "no_infobox", "comment": ""},
     {"page_id": 76175, "title": "Duelist League participation cards", "reason": "no_infobox", "comment": ""},
     {"page_id": 1196045, "title": "Advance Pack", "reason": "no_infobox", "comment": "Meta info page"},
+    {"page_id": 1236957, "title": "Dragon Lord of Three Realms", "reason": "no_infobox", "comment": "Video game pack: Master Duel"},
+    {"page_id": 1237554, "title": "Shooting Majesty", "reason": "no_infobox", "comment": "Video game pack: Duel Links"},
+    {"page_id": 1236955, "title": "Supernaturally Skilled Secret Squad", "reason": "no_infobox", "comment": "Video game pack: Master Duel"},
 
     {"page_id": 158043, "title": "Duel Terminal 4 (YGOO-DT)", "reason": "no_region", "comment": "Yu-Gi-Oh! Online"},
     {"page_id": 1072622, "title": "Duelist Item Pin Set", "reason": "no_region", "comment": "Pins"},
@@ -2240,6 +2243,11 @@
     {"page_id": 1236694, "title": "Shay pack", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist: Link Evolution"},
     {"page_id": 1236696, "title": "Yuya Sakaki pack (Link Evolution)", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist: Link Evolution"},
     {"page_id": 1236695, "title": "Declan Akaba pack (Link Evolution)", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist: Link Evolution"},
+    {"page_id": 1238914, "title": "Ai pack", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist: Link Evolution"},
+    {"page_id": 1237509, "title": "Blue Angel pack", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist: Link Evolution"},
+    {"page_id": 1237305, "title": "Playmaker pack", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist: Link Evolution"},
+    {"page_id": 1237783, "title": "Soulburner pack", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist: Link Evolution"},
+    {"page_id": 1237784, "title": "Varis pack", "reason": "video_game_set", "comment": "Video game set: Yu-Gi-Oh! Legacy of the Duelist: Link Evolution"},
 
     {"page_id": 346585, "title": "2-Player Starter Deck: Yuya & Declan", "reason": "unsupported_region", "comment": "No whitelisted region among ['de', 'eu', 'fr', 'it', 'pt', 'sp']"},
     {"page_id": 588541, "title": "15th Anniversary Playmat promotion", "reason": "unsupported_region", "comment": "No whitelisted region among ['kr']"},
@@ -2694,6 +2702,7 @@
     {"page_id": 1236585, "title": "Duelist Card Protector: Melffy Rabbys", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"},
     {"page_id": 1236843, "title": "Flagship Official Tournament Store Special Tournament Token Pack 2026 Vol.2", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"},
     {"page_id": 1236588, "title": "Witchcrafter Madame Verre Duel Set", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"},
+    {"page_id": 1238922, "title": "Immortal Phoenix Complement Pack", "reason": "unsupported_region", "comment": "No whitelisted region among ['sc']"},
 
     {"page_id": 901988, "title": "Duelist Pack Collection Tin 2007", "reason": "no_editions", "region": "na", "comment": "Super-set with no cards directly referenced"},
     {"page_id": 288717, "title": "Duelist Pack: Yugi & Kaiba Special Edition", "reason": "no_editions", "region": "na", "comment": "Super-set with no cards directly referenced"},

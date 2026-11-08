@@ -22,7 +22,7 @@ Inputs (JSON files, one record per file or a list per file; searched recursively
 
 
 Outputs (in --out-dir):
-  cards.json, sets.json, printings.json   the master data (flat, normalized)
+  cards.json, sets.json, printings.json   the master data (normalized; a setcode lists its printings)
   manifest.json                           counts + sha256 per file (cache-busting for clients)
   failures.jsonl                          one line per failure/warning, every occurrence
   build.log                               full log
