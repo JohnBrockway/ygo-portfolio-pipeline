@@ -84,6 +84,22 @@ def load_card_id_overrides(path):
 
     return overrides
 
+def load_printing_overrides(path):
+    """Load the manual printing overrides (which artwork a printing shows) as a list of entries.
+
+    The file is a list of objects; see printing_overrides.py for their fields.
+    The file must exist (an empty list is fine), so a wrong path can't silently
+    drop every override. An entry that isn't an object raises ValueError,
+    since that is a mistake in the file itself.
+    """
+    entries = json.loads(Path(path).read_text(encoding="utf-8"))
+
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError(f"{path}: expected an object, got {entry!r}")
+
+    return entries
+
 def load_image_index(path):
     """{wiki file name: image file name} written by the fetch step's image steps.
 

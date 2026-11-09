@@ -1,8 +1,10 @@
 """Turning a card's raw printings into master records.
 
 A setcode is one card's entry in one set under one set number (e.g. "15AX-JPM01").
-Its printings are the versions of that card with that set number, which differ
-by rarity (and art, though that's TODO).
+Its printings are the versions of that card with that set number. They differ by
+rarity, and by variant: every rarity has a variant 1, and manual overrides
+(printing_overrides.py) can add more variants for printings that exist in
+several artworks.
 
 Two steps:
   1. resolve_card_printings: match each raw printing to a set record (one result per rarity).
@@ -12,6 +14,8 @@ Two steps:
 from collections import defaultdict
 
 from text_utils import compact_uppercase, slugify
+
+FIRST_VARIANT = 1
 
 # ------------------------------------------------------------------ step 1: resolve
 
@@ -109,18 +113,39 @@ def make_setcode_id(printing, set_number, is_synthetic):
     return f"{printing['card_id']}:{printing['set']['set_id']}:{number_part}"
 
 
-def make_printing_id(printing, setcode_id):
-    """setcode id : rarity."""
-    rarity_part = slugify(printing["rarity"]) if printing["rarity"] else "none"
-    return f"{setcode_id}:{rarity_part}"
+def rarity_slug(rarity):
+    return slugify(rarity) if rarity else "none"
+
+
+def make_printing_id(setcode_id, rarity, variant):
+    """setcode id : rarity : variant."""
+    return f"{setcode_id}:{rarity_slug(rarity)}:{variant}"
+
+
+def make_printing(setcode_id, rarity, variant):
+    """A printing with no manual override applied: artwork unknown, not verified."""
+    return {
+        "printing_id": make_printing_id(setcode_id, rarity, variant),
+        "rarity": rarity,
+        "variant": variant,
+        "artwork": None,
+        "label": None,
+        "verified": False,
+    }
+
+
+def sort_printings(printings):
+    """Sorts a setcode's printings by rarity, then variant number."""
+    printings.sort(key=lambda printing: (rarity_slug(printing["rarity"]), printing["variant"]))
 
 
 def build_printing_records(resolved_printings, failures):
     """The final setcode records, sorted by setcode_id.
 
     One record per card, set and set number, listing its distinct printings
-    sorted by printing_id. Duplicate printing ids are logged and skipped, and so
-    are printings whose set number would share a setcode id with a different set number.
+    (variant 1 of each rarity) sorted by rarity. Duplicate printing ids are logged
+    and skipped, and so are printings whose set number would share a setcode id
+    with a different set number.
     """
     positions = synthetic_number_positions(resolved_printings)
     setcodes = {}
@@ -130,7 +155,8 @@ def build_printing_records(resolved_printings, failures):
         set_record = printing["set"]
         set_number, is_synthetic = make_set_number(printing, positions)
         setcode_id = make_setcode_id(printing, set_number, is_synthetic)
-        printing_id = make_printing_id(printing, setcode_id)
+        new_printing = make_printing(setcode_id, printing["rarity"], FIRST_VARIANT)
+        printing_id = new_printing["printing_id"]
 
         setcode = setcodes.get(setcode_id)
         if setcode is not None and setcode["set_number"] != set_number:
@@ -157,9 +183,9 @@ def build_printing_records(resolved_printings, failures):
                 "printings": [],
             }
             setcodes[setcode_id] = setcode
-        setcode["printings"].append({"printing_id": printing_id, "rarity": printing["rarity"]})
+        setcode["printings"].append(new_printing)
 
     records = sorted(setcodes.values(), key=lambda record: record["setcode_id"])
     for record in records:
-        record["printings"].sort(key=lambda printing: printing["printing_id"])
+        sort_printings(record["printings"])
     return records

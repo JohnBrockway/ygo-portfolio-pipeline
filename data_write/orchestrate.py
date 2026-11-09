@@ -2,6 +2,7 @@
 from collections import namedtuple
 
 from cards import build_card_record, choose_card_id
+from printing_overrides import apply_printing_overrides
 from printings import build_printing_records, resolve_card_printings
 from set_index import SetIndex
 from set_pruning import build_set_records
@@ -81,12 +82,21 @@ def report_stale_overrides(known_duplicate_cards, seen_duplicate_pageids,
                          title=known_duplicate_cards[pageid]["title"], natural_id=natural_id)
 
 
-def build_master_data(card_records, set_records, known_duplicate_cards,
+def collect_card_images(cards_by_id):
+    """{card_id: {image index: image file name or None}}, for checking printing overrides."""
+    card_images = {}
+    for card_id, card in cards_by_id.items():
+        card_images[card_id] = {image["index"]: image["file"] for image in card["images"]}
+    return card_images
+
+
+def build_master_data(card_records, set_records, known_duplicate_cards, printing_overrides,
                       card_image_index, set_image_index, failures):
     set_index = SetIndex(set_records, failures)
     cards_by_id, resolved_printings = collect_cards(card_records, set_index, known_duplicate_cards,
                                                     card_image_index, failures)
     printings = build_printing_records(resolved_printings, failures)
+    apply_printing_overrides(printings, printing_overrides, collect_card_images(cards_by_id), failures)
     sets = build_set_records(set_index, printings, cards_by_id, set_image_index, failures)
 
     set_index.report_unused_aliases(failures)
