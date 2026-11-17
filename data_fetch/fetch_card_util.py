@@ -10,9 +10,9 @@ from parse_card_util import parse_card_table_2, get_printings, get_images, get_c
 # category's "game" (a fixed set of values the master build and the app can rely on), and
 # its records are saved in <raw-out-dir>/<folder>.
 CARD_CATEGORIES = [
-    {"category": "Category:Duel Monsters cards", "game": "duel_monsters"},
-    {"category": "Category:Monster Tokens", "game": "duel_monsters"},
-    {"category": "Category:Rush Duel cards", "game": "rush_duel"},
+    {"category": "Category:Duel Monsters cards", "game": "duel_monsters", "folder": "duel_monsters_cards"},
+    {"category": "Category:Rush Duel cards", "game": "rush_duel", "folder": "rush_duel_cards"},
+    {"category": "Category:Monster Tokens", "game": "duel_monsters", "folder": "monster_token_cards"},
 ]
 
 # FALLBACK, kept for posterity: if matching set pages by the set names in the

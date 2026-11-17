@@ -129,7 +129,7 @@ def main():
         for source in CARD_CATEGORIES:
             log.info("Fetching cards: %s", source["category"])
             cards = fetch_card_records(session, source["category"], source["game"], card_failures)
-            write_card_records(raw_dir / (source["game"] + "_cards"), cards)
+            write_card_records(raw_dir / source["folder"], cards)
         save_failures(card_failures, raw_dir / "card_failures.jsonl")
 
     if run_sets:
@@ -153,7 +153,7 @@ def main():
         # One stream of records across every game's folder. Chaining like this makes 
         # each folder's existence check run here, before any fetching starts.
         saved_card_records = chain.from_iterable(
-            [iter_saved_card_records(raw_dir / (source["game"] + "_cards")) for source in CARD_CATEGORIES]
+            [iter_saved_card_records(raw_dir / source["folder"]) for source in CARD_CATEGORIES]
         )
         try:
             fetch_card_images(session, saved_card_records, card_image_dir, card_image_index_file,

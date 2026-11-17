@@ -23,6 +23,8 @@ Inputs (JSON files, one record per file or a list per file; searched recursively
 
 Outputs (in --out-dir):
   cards.json, sets.json, printings.json   the master data (normalized; a setcode lists its printings)
+  card_images/, set_images/               only the images that cards.json / sets.json reference,
+                                          copied from the fetch folders (stale files removed)
   manifest.json                           counts + sha256 per file (cache-busting for clients)
   failures.jsonl                          one line per failure/warning, every occurrence
   build.log                               full log
@@ -31,6 +33,7 @@ Usage:
   python main.py --cards-dir data/duel_monsters_cards data/rush_duel_cards \
       --sets-dir data/sets \
       --card-image-index data/card_image_index.json --set-image-index data/set_image_index.json \
+      --card-images-dir data/card_images --set-images-dir data/set_images \
       --out-dir out [--pretty]
 """
 import argparse
@@ -39,6 +42,7 @@ from itertools import chain
 from pathlib import Path
 
 from failures import Failures
+from image_output import copy_used_images
 from orchestrate import build_master_data
 from output_writer import write_master_files
 from record_loading import (load_image_index, load_known_errors, load_records,
@@ -59,6 +63,10 @@ def parse_args():
     parser.add_argument("--sets-dir", required=True)
     parser.add_argument("--card-image-index", required=True)
     parser.add_argument("--set-image-index", required=True)
+    parser.add_argument("--card-images-dir", required=True,
+                        help="folder of card images written by the fetch card_images step")
+    parser.add_argument("--set-images-dir", required=True,
+                        help="folder of set images written by the fetch set_images step")
     parser.add_argument("--out-dir", default="out")
     parser.add_argument("--pretty", action="store_true",
                         help="indent JSON (dev only; bigger files)")
@@ -99,9 +107,11 @@ def main():
 
     master = build_master_data(card_records, set_records, known_duplicate_cards, printing_overrides,
                                card_image_index, set_image_index, failures)
+    image_counts = copy_used_images(master, args.card_images_dir, args.set_images_dir, out_dir, failures)
     counts = write_master_files(out_dir, master, failures, pretty=args.pretty)
 
     log.info("DONE %s", counts)
+    log.info("images %s", image_counts)
     log.info("failure counts: %s", dict(failures.counts.most_common()))
     log.info("see %s", out_dir / "failures.jsonl")
 

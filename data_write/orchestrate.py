@@ -44,19 +44,23 @@ def collect_cards(card_records, set_index, known_duplicate_cards, card_image_ind
             failures.add("missing_card_id", title=title)
             continue
 
+        raw_printings = card.get("printings")
+        if not raw_printings:
+            failures.add("card_without_printings", card_id=card_id, title=title)
+            continue
+
+        card_printings = resolve_card_printings(card_id, title, raw_printings, set_index, failures)
+        if not card_printings:
+            failures.add("card_without_resolved_printings", card_id=card_id, title=title)
+            continue
+
         if card_id in cards_by_id:
             failures.add("duplicate_card_id", card_id=card_id, title=title,
                          other_title=cards_by_id[card_id]["title"])
             continue
 
         cards_by_id[card_id] = build_card_record(card_id, card, card_image_index, failures)
-
-        raw_printings = card.get("printings")
-        if not raw_printings:
-            failures.add("card_without_printings", card_id=card_id, title=title)
-            continue
-
-        resolved_printings += resolve_card_printings(card_id, title, raw_printings, set_index, failures)
+        resolved_printings += card_printings
 
     report_stale_overrides(known_duplicate_cards, seen_duplicate_pageids,
                            applied_overrides, cards_by_id, failures)
