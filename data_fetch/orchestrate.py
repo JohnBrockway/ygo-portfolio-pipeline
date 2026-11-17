@@ -121,7 +121,7 @@ def find_stale_images(local_names, image_dir):
 def fetch_images(session, names_by_wiki_name, image_dir, index_path, failures):
     """Download an image for every name that isn't already in image_dir, then write the index.
 
-    Files in image_dir that no record references are reported as stale, not deleted.
+    Files in image_dir that no record references are deleted, including leftover .part files.
     """
     # Deliberately NOT reset_dir(): downloads are slow, so a rerun only fetches what's missing
     # (delete to force a refetch).
@@ -130,10 +130,9 @@ def fetch_images(session, names_by_wiki_name, image_dir, index_path, failures):
 
     stale = find_stale_images(local_names, image_dir)
     for file_name in stale:
-        failures.add("stale_image_file", file=file_name)
+        (image_dir / file_name).unlink()
     if stale:
-        log.info("%d files in %s are not referenced by any record (see the failures file)",
-                 len(stale), image_dir)
+        log.info("Deleted %d files in %s that no record references", len(stale), image_dir)
 
     todo = [name for name in local_names if not (image_dir / output_name(name)).exists()]
     log.info("%d already downloaded, %d to fetch", len(local_names) - len(todo), len(todo))
