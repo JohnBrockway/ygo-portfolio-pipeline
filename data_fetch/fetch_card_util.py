@@ -4,13 +4,14 @@ of one page into the JSON record the rest of the pipeline reads, and a generator
 every parsable card in one category.
 """
 from mediawiki_util import query_pages
-from parse_card_util import parse_card_table_2, get_printings, get_images
+from parse_card_util import parse_card_table_2, get_printings, get_images, get_card_type
 
 # One entry per wiki category of cards. Every card found in a category is tagged with that
 # category's "game" (a fixed set of values the master build and the app can rely on), and
 # its records are saved in <raw-out-dir>/<folder>.
 CARD_CATEGORIES = [
     {"category": "Category:Duel Monsters cards", "game": "duel_monsters"},
+    {"category": "Category:Monster Tokens", "game": "duel_monsters"},
     {"category": "Category:Rush Duel cards", "game": "rush_duel"},
 ]
 
@@ -81,7 +82,7 @@ def build_card_record(card_page, game, failures):
         "name_ja": card_fields.get("ja_name"),
         "password": password,
         "konami_id": konami_id,
-        "card_type": card_fields.get("card_type", "Monster"),
+        "card_type": get_card_type(card_fields),
         "images": get_images(card_fields.get("image"), failures, card_page["pageid"], card_page["title"]),
         "printings": get_printings(card_fields),
     }

@@ -6,6 +6,8 @@ import wikitextparser as wtp
 
 COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 
+SPECIFIC_MONSTER_TYPES = ["Pendulum", "Synchro", "Ritual", "Xyz", "Fusion", "Link"]
+
 
 def parse_card_table_2(wikitext):
     """Return the CardTable2 template's fields as a {name: value} dict, or None if the page doesn't have that template."""
@@ -86,3 +88,21 @@ def get_images(image_field, failures, pageid, title):
             failures.add("card_image_row_blank", page_id=pageid, title=title,
                          comment=f"image row {index!r} has neither a card image nor an art image")
     return images
+
+
+def get_card_type(card_fields):
+    """
+    The single card type for a card: the card_type field if the template has one (Spell, Trap, ...),
+    otherwise the most specific monster type found in the "types" field, otherwise "Monster".
+
+    The types field looks like "Dragon / Synchro / Effect".
+    """
+    card_type = card_fields.get("card_type")
+    if card_type:
+        return card_type
+
+    monster_types = {part.strip().lower() for part in card_fields.get("types", "").split("/")}
+    for specific_type in SPECIFIC_MONSTER_TYPES:
+        if specific_type.lower() in monster_types:
+            return specific_type
+    return "Monster"
