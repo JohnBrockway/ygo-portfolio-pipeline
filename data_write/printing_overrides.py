@@ -14,11 +14,16 @@ Each entry looks like:
              that the override creates.
   artwork    is the card image index, exactly as in cards.json (a string).
   image      is the image file at that index when the override was made (optional).
-             If the card's image at that index is now a different file, the indexes
-             have probably shifted, so the entry is rejected.
+             It is only a safety check, since versions are identified by artwork.
+             If the card's image at that index is now a different file, the
+             override is still applied, so the printing isn't lost from users'
+             lists, but a failure is logged: Yugipedia may just have touched the
+             image up, or it may have tied a new artwork to that index, which
+             needs fixing by hand.
   label      is free text that tells versions apart, e.g. "Dueling Network stamp" (optional).
 
-Bad entries are logged as failures and skipped.
+Bad entries are logged as failures and skipped, except an entry whose image
+changed, which is logged and still applied.
 """
 from printings import FIRST_VARIANT, make_printing, sort_printings
 
@@ -79,10 +84,12 @@ def apply_printing_overrides(setcode_records, overrides, card_images, failures):
             failures.add("override_artwork_not_on_card", **description, card_id=record["card_id"])
             continue
 
+        # Only reported, not skipped: dropping the printing would silently remove
+        # a card that the user has had access to. The pruned image shows up as a
+        # missing tile in the app, and the failure log tells us what to check.
         if image is not None and image != image_files[artwork]:
             failures.add("override_image_changed", **description,
                          expected_image=image, current_image=image_files[artwork])
-            continue
 
         # Two versions of a rarity with the same artwork need different labels.
         look = (setcode_id, rarity, artwork, label)
