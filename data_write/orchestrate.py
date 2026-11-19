@@ -10,7 +10,7 @@ from set_pruning import build_set_records
 MasterData = namedtuple("MasterData", ["cards", "sets", "printings"])
 
 
-def collect_cards(card_records, set_index, known_duplicate_cards, card_image_index, failures):
+def collect_cards(card_records, set_index, card_id_overrides, card_image_index, failures):
     """Build the card records and resolve every card's printings against the set index.
 
     Returns (cards_by_id, resolved_printings).
@@ -24,7 +24,7 @@ def collect_cards(card_records, set_index, known_duplicate_cards, card_image_ind
         title = card.get("title")
         page_id = card.get("page_id")
 
-        override = known_duplicate_cards.get(page_id)
+        override = card_id_overrides.get(page_id)
         if override is not None:
             seen_duplicate_page_ids.add(page_id)
             if override["title"] != title:
@@ -62,16 +62,16 @@ def collect_cards(card_records, set_index, known_duplicate_cards, card_image_ind
         cards_by_id[card_id] = build_card_record(card_id, card, card_image_index, failures)
         resolved_printings += card_printings
 
-    report_stale_overrides(known_duplicate_cards, seen_duplicate_page_ids,
+    report_stale_overrides(card_id_overrides, seen_duplicate_page_ids,
                            applied_overrides, cards_by_id, failures)
 
     return cards_by_id, resolved_printings
 
 
-def report_stale_overrides(known_duplicate_cards, seen_duplicate_page_ids,
+def report_stale_overrides(card_id_overrides, seen_duplicate_page_ids,
                            applied_overrides, cards_by_id, failures):
     """Flag overrides that matched no page, or that are no longer needed."""
-    for page_id, override in known_duplicate_cards.items():
+    for page_id, override in card_id_overrides.items():
         if page_id not in seen_duplicate_page_ids:
             failures.add("unused_card_id_override", page_id=page_id, title=override["title"])
 
@@ -83,7 +83,7 @@ def report_stale_overrides(known_duplicate_cards, seen_duplicate_page_ids,
         natural_id_is_free = holder is None or holder["page_id"] == page_id
         if natural_id_is_free:
             failures.add("unneeded_card_id_override", page_id=page_id,
-                         title=known_duplicate_cards[page_id]["title"], natural_id=natural_id)
+                         title=card_id_overrides[page_id]["title"], natural_id=natural_id)
 
 
 def collect_card_images(cards_by_id):
@@ -94,10 +94,10 @@ def collect_card_images(cards_by_id):
     return card_images
 
 
-def build_master_data(card_records, set_records, set_aliases, known_duplicate_cards,
+def build_master_data(card_records, set_records, set_aliases, card_id_overrides,
                       printing_overrides, card_image_index, set_image_index, failures):
     set_index = SetIndex(set_records, set_aliases, failures)
-    cards_by_id, resolved_printings = collect_cards(card_records, set_index, known_duplicate_cards,
+    cards_by_id, resolved_printings = collect_cards(card_records, set_index, card_id_overrides,
                                                     card_image_index, failures)
     printings = build_printing_records(resolved_printings, failures)
     apply_printing_overrides(printings, printing_overrides, collect_card_images(cards_by_id), failures)
