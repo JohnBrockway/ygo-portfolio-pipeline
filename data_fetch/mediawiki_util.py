@@ -161,6 +161,12 @@ def query_pages(session, params):
 
 
 def query_category_pages(session, category):
-    """Yield every page directly in the category (subcategories are not followed), with its wikitext."""
+    """Yield every page directly in the category (subcategories are not followed), with its wikitext.
+
+    Pages that came back without wikitext (a missing page, or a batch without content) are skipped.
+    """
     params = {**CATEGORY_PAGES_PARAMS, "gcmtitle": category}
-    yield from query_pages(session, params)
+    for page in query_pages(session, params):
+        if "revisions" not in page:
+            continue
+        yield page

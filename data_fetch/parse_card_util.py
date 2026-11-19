@@ -109,7 +109,7 @@ def get_card_type(card_fields):
             return specific_type
     return "Monster"
 
-def verify_numeral(string):
+def numeric_or_none(string):
     """
     Returns string if it's a string representation of a number with ASCII numerals, otherwise None
     """
@@ -128,15 +128,15 @@ def parse_card_page(page, game, failures):
     """
     revisions = page.get("revisions")
     if not revisions:
-        failures.add("card_page_unparseable", page_id=page["pageid"], title=page["title"])
+        failures.add("absent_or_malformed_wikitext", page_id=page["pageid"], title=page["title"])
         return None
     card_fields = parse_card_table_2(revisions[0]["slots"]["main"]["content"])
     if card_fields is None:
-        failures.add("card_page_unparseable", page_id=page["pageid"], title=page["title"])
+        failures.add("no_card_table", page_id=page["pageid"], title=page["title"])
         return None
 
-    password = verify_numeral(card_fields.get("password"))
-    konami_id = verify_numeral(card_fields.get("database_id"))
+    password = numeric_or_none(card_fields.get("password"))
+    konami_id = numeric_or_none(card_fields.get("database_id"))
 
     return {
         "page_id": page["pageid"],

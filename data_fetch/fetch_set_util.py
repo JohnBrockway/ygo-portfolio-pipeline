@@ -88,8 +88,6 @@ def fetch_tree_pages(session, categories):
         # Direct pages only: subcategories have already been handled by discover_categories.
         for page in query_category_pages(session, category):
             progress.update("Fetching set pages: category %d/%d, %d pages so far", index, total, len(seen_ids))
-            if "revisions" not in page:
-                continue                    # missing page or a batch without content
             if page["pageid"] in seen_ids:
                 continue
             seen_ids.add(page["pageid"])
