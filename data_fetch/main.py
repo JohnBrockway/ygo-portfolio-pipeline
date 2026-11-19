@@ -43,7 +43,7 @@ from pathlib import Path
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from data_fetch.failures import Failures
+from common.failures import Failures
 from data_fetch.fetch_card_util import CARD_CATEGORIES
 from data_fetch.load_inputs import (
     iter_saved_card_records,
