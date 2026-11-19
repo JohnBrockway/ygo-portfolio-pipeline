@@ -1,6 +1,7 @@
 import re
 
 from regions import WHITELISTED_REGIONS
+from wikitext_util import find_template
 
 import wikitextparser as wtp
 
@@ -12,10 +13,10 @@ SPECIFIC_MONSTER_TYPES = ["Pendulum", "Synchro", "Ritual", "Xyz", "Fusion", "Lin
 def parse_card_table_2(wikitext):
     """Return the CardTable2 template's fields as a {name: value} dict, or None if the page doesn't have that template."""
     parsed = wtp.parse(COMMENT_RE.sub("", wikitext))
-    for template in parsed.templates:
-        if template.name.strip().lower() == "cardtable2":
-            return {arg.name.strip(): arg.value.strip() for arg in template.arguments}
-    return None
+    template = find_template(parsed, "cardtable2")
+    if template is None:
+        return None
+    return {arg.name.strip(): arg.value.strip() for arg in template.arguments}
 
 
 def split_fields(line, count):

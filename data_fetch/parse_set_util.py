@@ -1,6 +1,7 @@
 import re
 from datetime import datetime
 from regions import WHITELISTED_REGIONS
+from wikitext_util import find_template
 
 import wikitextparser as wtp
 
@@ -37,16 +38,18 @@ EDITION_FIELDS = [
 INVISIBLE = re.compile("[\u200b-\u200d\u2060\ufeff]")
 
 
-def parse_infobox_set(wikitext):
-    """Returns the Infobox set template's fields as a {name: value} dict."""
-    parsed = wtp.parse(wikitext)
-    for template in parsed.templates:
-        if template.name.strip().lower() == "infobox set":
-            return {
-                arg.name.strip(): INVISIBLE.sub("", arg.value).strip()
-                for arg in template.arguments
-            }
-    return None
+def parse_infobox_set(parsed):
+    """Returns the Infobox set template's fields as a {name: value} dict, or None if the page has none.
+
+    `parsed` is the page's wikitext as parsed by wikitextparser.
+    """
+    template = find_template(parsed, "infobox set")
+    if template is None:
+        return None
+    return {
+        arg.name.strip(): INVISIBLE.sub("", arg.value).strip()
+        for arg in template.arguments
+    }
 
 
 def clean(value):
@@ -122,19 +125,21 @@ def pick_release_date(all_dates, region):
     return None
 
 
-def get_set_navigation(wikitext):
+def get_set_navigation(parsed):
     """{arg name: set of lowercased region codes} from {{Set navigation}}; {} if the template is absent.
+
+    `parsed` is the page's wikitext as parsed by wikitextparser.
 
     Holds Lists (which regions the set was released in) and the edition fields
     (1e_galleries, ue_galleries, le_galleries), all written as comma-separated codes.
     """
-    for template in wtp.parse(wikitext).templates:
-        if template.name.strip().lower() == "set navigation":
-            return {
-                arg.name.strip(): {c.strip().lower() for c in arg.value.split(",") if c.strip()}
-                for arg in template.arguments
-            }
-    return {}
+    template = find_template(parsed, "set navigation")
+    if template is None:
+        return {}
+    return {
+        arg.name.strip(): {c.strip().lower() for c in arg.value.split(",") if c.strip()}
+        for arg in template.arguments
+    }
 
 
 def pick_editions(navigation, region, kept):
@@ -168,7 +173,8 @@ def parse_set_page(page, failures):
         failures.add("absent_or_malformed_wikitext", page_id=page["pageid"], title=page["title"])
         return []
     wikitext = revisions[0]["slots"]["main"]["content"]
-    fields = parse_infobox_set(wikitext)
+    parsed = wtp.parse(wikitext)
+    fields = parse_infobox_set(parsed)
     if fields is None:
         failures.add("no_infobox", page_id=page["pageid"], title=page["title"])
         return []
@@ -179,7 +185,7 @@ def parse_set_page(page, failures):
     all_dates = get_release_dates(fields)
     prefixes = get_region_values(fields, "prefix")
     postfixes = get_region_values(fields, "postfix")
-    navigation = get_set_navigation(wikitext)
+    navigation = get_set_navigation(parsed)
 
     # Lists is primary; release-date used to determine regions only if there's no usable Lists field.
     regions = navigation.get("lists") or set(all_dates)
