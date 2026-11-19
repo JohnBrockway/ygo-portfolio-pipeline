@@ -17,18 +17,18 @@ def collect_cards(card_records, set_index, known_duplicate_cards, card_image_ind
     """
     cards_by_id = {}
     resolved_printings = []
-    seen_duplicate_pageids = set()
-    applied_overrides = {}  # pageid -> the id the card would have had without the override
+    seen_duplicate_page_ids = set()
+    applied_overrides = {}  # page_id -> the id the card would have had without the override
 
     for card in card_records:
         title = card.get("title")
-        pageid = card.get("pageid")
+        page_id = card.get("page_id")
 
-        override = known_duplicate_cards.get(pageid)
+        override = known_duplicate_cards.get(page_id)
         if override is not None:
-            seen_duplicate_pageids.add(pageid)
+            seen_duplicate_page_ids.add(page_id)
             if override["title"] != title:
-                failures.add("card_id_override_mismatch", pageid=pageid, title=title,
+                failures.add("card_id_override_mismatch", page_id=page_id, title=title,
                              expected_title=override["title"])
                 override = None  # don't apply it; the natural id will likely collide and fail loudly
 
@@ -36,7 +36,7 @@ def collect_cards(card_records, set_index, known_duplicate_cards, card_image_ind
 
         if override is not None:
             card_id = override["card_id"]
-            applied_overrides[pageid] = natural_id
+            applied_overrides[page_id] = natural_id
         else:
             card_id = natural_id
 
@@ -62,28 +62,28 @@ def collect_cards(card_records, set_index, known_duplicate_cards, card_image_ind
         cards_by_id[card_id] = build_card_record(card_id, card, card_image_index, failures)
         resolved_printings += card_printings
 
-    report_stale_overrides(known_duplicate_cards, seen_duplicate_pageids,
+    report_stale_overrides(known_duplicate_cards, seen_duplicate_page_ids,
                            applied_overrides, cards_by_id, failures)
 
     return cards_by_id, resolved_printings
 
 
-def report_stale_overrides(known_duplicate_cards, seen_duplicate_pageids,
+def report_stale_overrides(known_duplicate_cards, seen_duplicate_page_ids,
                            applied_overrides, cards_by_id, failures):
     """Flag overrides that matched no page, or that are no longer needed."""
-    for pageid, override in known_duplicate_cards.items():
-        if pageid not in seen_duplicate_pageids:
-            failures.add("unused_card_id_override", pageid=pageid, title=override["title"])
+    for page_id, override in known_duplicate_cards.items():
+        if page_id not in seen_duplicate_page_ids:
+            failures.add("unused_card_id_override", page_id=page_id, title=override["title"])
 
-    for pageid, natural_id in applied_overrides.items():
+    for page_id, natural_id in applied_overrides.items():
         if natural_id is None:
             continue  # card has no natural id at all, so the override is still doing real work
 
         holder = cards_by_id.get(natural_id)
-        natural_id_is_free = holder is None or holder["pageid"] == pageid
+        natural_id_is_free = holder is None or holder["page_id"] == page_id
         if natural_id_is_free:
-            failures.add("unneeded_card_id_override", pageid=pageid,
-                         title=known_duplicate_cards[pageid]["title"], natural_id=natural_id)
+            failures.add("unneeded_card_id_override", page_id=page_id,
+                         title=known_duplicate_cards[page_id]["title"], natural_id=natural_id)
 
 
 def collect_card_images(cards_by_id):

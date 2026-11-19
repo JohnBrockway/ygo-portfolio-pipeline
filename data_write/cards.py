@@ -15,7 +15,7 @@ def clean_id(value):
 
 
 def choose_card_id(card):
-    """Pick the card's id: konami_id, else password, else wiki pageid.
+    """Pick the card's id: konami_id, else password, else wiki page_id.
 
     A letter prefix (k / p / w) keeps the three id spaces from colliding.
     Returns None if the card has none of them.
@@ -28,8 +28,8 @@ def choose_card_id(card):
     if password:
         return f"p{password}"
 
-    if card.get("pageid") is not None:
-        return f"w{card['pageid']}"
+    if card.get("page_id") is not None:
+        return f"w{card['page_id']}"
 
     return None
 
@@ -54,7 +54,7 @@ def build_card_images(card_id, card, image_index, failures):
 def build_card_record(card_id, card, image_index, failures):
     return {
         "card_id": card_id,
-        "pageid": card.get("pageid"),
+        "page_id": card.get("page_id"),
         "title": card.get("title"),
         "game": card["game"],
         "name_ja": card.get("name_ja"),

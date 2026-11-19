@@ -4,7 +4,7 @@ build_backend.py - join card printings to set records and write the master datas
 
 Inputs (JSON files, one record per file or a list per file; searched recursively):
   --cards-dir   one or more folders of card records, one folder per game
-                (pageid, title, game, konami_id, password, printings[...], images[...])
+                (page_id, title, game, konami_id, password, printings[...], images[...])
   --sets-dir    set records   (page_id, title, region, name, names, image, prefix, release_date ...)
   --card-image-index  JSON written by the fetch card_images step: {wiki file name: image file name}
   --set-image-index   JSON written by the fetch set_images step, same shape

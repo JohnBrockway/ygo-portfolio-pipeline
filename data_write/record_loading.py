@@ -69,7 +69,7 @@ def load_known_errors(path):
     return known_errors
 
 def load_card_id_overrides(path):
-    """Load the manual card id overrides, keyed by wiki pageid."""
+    """Load the manual card id overrides, keyed by wiki page_id."""
     if not path or not Path(path).exists():
         return {}
 
@@ -77,10 +77,10 @@ def load_card_id_overrides(path):
 
     overrides = {}
     for entry in entries:
-        pageid = entry["pageid"]
-        if pageid in overrides:
-            raise ValueError(f"Two card id overrides for pageid {pageid}")
-        overrides[pageid] = entry
+        page_id = entry["page_id"]
+        if page_id in overrides:
+            raise ValueError(f"Two card id overrides for page_id {page_id}")
+        overrides[page_id] = entry
 
     return overrides
 
