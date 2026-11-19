@@ -1,12 +1,12 @@
 """
 Fetch loop for set pages.
 
-Cards live in one flat category, but Yugipedia files Sets in NESTED categories
-(e.g. Category:TCG sets -> Category:TCG Booster Packs -> Rarity Collection 5),
+Cards live in flat categories (see CARD_CATEGORIES), but Yugipedia files Sets in NESTED
+categories (e.g. Category:TCG sets -> Category:TCG Booster Packs -> Rarity Collection 5),
 and the API only returns a category's direct members. So this is two phases:
 
   1. discover_categories(): breadth-first walk over subcategories only (titles, no
-     wikitext). The `tree` dict is both the result and the visited set. A category is 
+     wikitext). The `tree` dict is both the result and the visited set. A category is
      added the moment it is first seen, so cycles and shared subcategories can never
      be queued twice.
   2. fetch_tree_pages(): download each discovered category's direct page members with

@@ -45,8 +45,8 @@ from load_inputs import (
     load_edition_overrides,
     load_known_errors,
 )
-from orchestrate import fetch_card_images, fetch_set_images, fetch_set_records
 from mediawiki_util import make_session
+from orchestrate import fetch_card_images, fetch_set_images, fetch_set_records
 from raw_output_writer import write_card_records, write_set_categories, write_set_records
 
 log = logging.getLogger("fetch")
@@ -150,7 +150,7 @@ def main():
 
     if run_card_images:
         card_image_failures = Failures()
-        # One stream of records across every game's folder. Chaining like this makes 
+        # One stream of records across every game's folder. Chaining like this makes
         # each folder's existence check run here, before any fetching starts.
         saved_card_records = chain.from_iterable(
             [iter_saved_card_records(raw_dir / source["folder"]) for source in CARD_CATEGORIES]

@@ -1,3 +1,4 @@
+"""Parsing of card page wikitext: the CardTable2 template, printings, images and card type."""
 import re
 
 from regions import WHITELISTED_REGIONS
@@ -61,7 +62,7 @@ def parse_sets_for_region(sets_field, region):
     return printings
 
 
-def get_images(image_field, failures, pageid, title):
+def get_images(image_field, failures, page_id, title):
     """Turn the image field into a list of {"index", "file", "art_only"} entries.
 
     Each line looks like: index; card image file; a bool indicating whether the image is art (square)
@@ -69,7 +70,7 @@ def get_images(image_field, failures, pageid, title):
 
     Each row uses the art-only file if it has one (art_only True), otherwise the full card
     image (art_only False), the same rule the wiki uses. Rows with neither file are
-    reported to failures (keyed by the card's pageid and title) and left out.
+    reported to failures (keyed by the card's page_id and title) and left out.
     """
     if not image_field:
         return []
@@ -86,7 +87,7 @@ def get_images(image_field, failures, pageid, title):
         elif card_image:
             images.append({"index": index, "file": card_image, "art_only": False})
         else:
-            failures.add("card_image_row_blank", page_id=pageid, title=title,
+            failures.add("card_image_row_blank", page_id=page_id, title=title,
                          comment=f"image row {index!r} has neither a card image nor an art image")
     return images
 

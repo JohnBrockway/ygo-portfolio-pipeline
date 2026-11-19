@@ -96,14 +96,14 @@ def collect_card_image_names(card_records, failures):
     names = {}
     for record in card_records:
         if not record["images"]:
-            failures.add("card_has_no_images", pageid=record["pageid"], title=record["title"])
+            failures.add("card_has_no_images", page_id=record["pageid"], title=record["title"])
             continue
         for image in record["images"]:
             name = local_image_name(image["file"])
             if name is not None:
                 names[image["file"]] = name
             else:
-                failures.add("card_image_name_unusable", pageid=record["pageid"], title=record["title"],
+                failures.add("card_image_name_unusable", page_id=record["pageid"], title=record["title"],
                              comment=f"image index {image['index']!r}, file field: {image['file']!r}")
     log.info("%d distinct card images referenced", len(set(names.values())))
     return names

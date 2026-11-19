@@ -1,3 +1,4 @@
+"""Parsing of set page wikitext: the Infobox set and Set navigation templates, into one record per region."""
 import re
 from datetime import datetime
 from regions import WHITELISTED_REGIONS
@@ -163,10 +164,10 @@ def pick_editions(navigation, region, kept):
 
 
 def parse_set_page(page, failures):
-    """`page` is one of the raw dumps (pageid, title, wikitext, ...).
+    """`page` is one raw page from the wiki (pageid, title, revisions, ...).
 
-    Returns one record per whitelisted region the set was released in. Raises a
-    SetParseError if the page can't produce a single record for any reason.
+    Returns one record per whitelisted region the set was released in. If the page can't
+    produce a single record, the reason goes to `failures` and the result is [].
     """
     revisions = page.get("revisions")
     if not revisions:
@@ -178,8 +179,10 @@ def parse_set_page(page, failures):
     if fields is None:
         failures.add("no_infobox", page_id=page["pageid"], title=page["title"])
         return []
-    if clean(fields.get("appears_in_video_games", "")):
-        failures.add("video_game_set", page_id=page["pageid"], title=page["title"], comment=f"Video game set: {clean(fields['appears_in_video_games'])}")
+    video_games = clean(fields.get("appears_in_video_games", ""))
+    if video_games:
+        failures.add("video_game_set", page_id=page["pageid"], title=page["title"],
+                     comment=f"Video game set: {video_games}")
         return []
 
     all_dates = get_release_dates(fields)
@@ -190,11 +193,13 @@ def parse_set_page(page, failures):
     # Lists is primary; release-date used to determine regions only if there's no usable Lists field.
     regions = navigation.get("lists") or set(all_dates)
     if not regions:
-        failures.add("no_region", page_id=page["pageid"], title=page["title"], comment="No Lists field or release dates in wikitext")
+        failures.add("no_region", page_id=page["pageid"], title=page["title"],
+                     comment="No Lists field or release dates in wikitext")
         return []
     kept_regions = regions & WHITELISTED_REGIONS
     if not kept_regions:
-        failures.add("unsupported_region", page_id=page["pageid"], title=page["title"], comment=f"No whitelisted region among {sorted(regions)}")
+        failures.add("unsupported_region", page_id=page["pageid"], title=page["title"],
+                     comment=f"No whitelisted region among {sorted(regions)}")
         return []
 
     records = []
