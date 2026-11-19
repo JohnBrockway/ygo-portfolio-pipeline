@@ -24,7 +24,7 @@ def write_card_records(out_dir, records):
     saved = 0
     progress = Progress(log)  # records stream in from the fetch, so this is the cards step's heartbeat
     for record in records:
-        write_json_to_file(out_dir / f"{record['pageid']}.json", record)
+        write_json_to_file(out_dir / f"{record['page_id']}.json", record)
         saved += 1
         progress.update("Cards saved so far: %d", saved)
     log.info("Saved %d cards to %s", saved, out_dir)

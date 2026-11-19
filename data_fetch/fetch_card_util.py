@@ -56,7 +56,7 @@ def build_card_record(card_page, game, failures):
     konami_id = verify_numeral(card_fields.get("database_id"))
 
     return {
-        "pageid": card_page["pageid"],
+        "page_id": card_page["pageid"],
         "title": card_page["title"],
         "url": card_page["canonicalurl"],
         "game": game,

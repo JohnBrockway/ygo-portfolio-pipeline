@@ -10,7 +10,7 @@ and the API only returns a category's direct members. So this is two phases:
      added the moment it is first seen, so cycles and shared subcategories can never
      be queued twice.
   2. fetch_tree_pages(): download each discovered category's direct page members with
-     wikitext, de-duplicated by pageid (a page can sit in several categories).
+     wikitext, de-duplicated by page_id (a page can sit in several categories).
 """
 import logging
 import re
@@ -77,7 +77,7 @@ def discover_categories(session, roots, exclude=(), max_categories=2000):
 
 
 def fetch_tree_pages(session, categories):
-    """Yield direct page members of each category, once per pageid."""
+    """Yield direct page members of each category, once per page_id."""
     seen_ids = set()
     categories = list(categories)
     total = len(categories)
