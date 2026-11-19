@@ -1,5 +1,5 @@
 [
-    {"page_id": 715635, "title": "List of Rush Duel cards by Konami index number", "reason": "card_page_unparseable", "comment": "Meta info page"},
-    {"page_id": 225, "title": "Monster Token", "reason": "card_page_unparseable", "comment": "Meta info page"},
-    {"page_id": 56909, "title": "List of Monster Tokens", "reason": "card_page_unparseable", "comment": "Meta info page"}
+    {"page_id": 715635, "title": "List of Rush Duel cards by Konami index number", "kind": "card_page_unparseable", "comment": "Meta info page"},
+    {"page_id": 225, "title": "Monster Token", "kind": "card_page_unparseable", "comment": "Meta info page"},
+    {"page_id": 56909, "title": "List of Monster Tokens", "kind": "card_page_unparseable", "comment": "Meta info page"}
 ]

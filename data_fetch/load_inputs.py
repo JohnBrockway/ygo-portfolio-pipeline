@@ -8,12 +8,17 @@ from parse_set_util import EDITION_FIELDS
 
 
 def load_known_errors(path):
-    """Set of (page_id, title, reason) for sets we've already reviewed and accepted as unparseable.
+    """List of known-error dicts for failures we've already reviewed and accepted.
 
+    Each entry must include "kind"; see Failures for how entries are matched.
     The file must exist (an empty list is fine).
     """
     with open(path, encoding="utf-8") as file:
-        return {(entry["page_id"], entry["title"], entry["reason"]) for entry in json.load(file)}
+        known_errors = json.load(file)
+    for entry in known_errors:
+        if "kind" not in entry:
+            raise ValueError(f'Known error is missing "kind" (older files used "reason"): {entry}')
+    return known_errors
 
 
 def load_edition_overrides(path):
