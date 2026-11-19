@@ -108,3 +108,45 @@ def get_card_type(card_fields):
         if specific_type.lower() in monster_types:
             return specific_type
     return "Monster"
+
+def verify_numeral(string):
+    """
+    Returns string if it's a string representation of a number with ASCII numerals, otherwise None
+    """
+    value = (string or "").strip()
+    if value.isascii() and value.isdigit():
+        return value
+    return None
+
+
+def parse_card_page(page, game, failures):
+    """`page` is one raw page from the wiki (pageid, title, revisions, ...).
+
+    Returns the JSON record to save, or None if the page can't produce one, in which case the
+    reason goes to `failures`. Problems with individual image rows are reported to failures
+    too; the rest of the record is still returned.
+    """
+    revisions = page.get("revisions")
+    if not revisions:
+        failures.add("card_page_unparseable", page_id=page["pageid"], title=page["title"])
+        return None
+    card_fields = parse_card_table_2(revisions[0]["slots"]["main"]["content"])
+    if card_fields is None:
+        failures.add("card_page_unparseable", page_id=page["pageid"], title=page["title"])
+        return None
+
+    password = verify_numeral(card_fields.get("password"))
+    konami_id = verify_numeral(card_fields.get("database_id"))
+
+    return {
+        "page_id": page["pageid"],
+        "title": page["title"],
+        "url": page["canonicalurl"],
+        "game": game,
+        "name_ja": card_fields.get("ja_name"),
+        "password": password,
+        "konami_id": konami_id,
+        "card_type": get_card_type(card_fields),
+        "images": get_images(card_fields.get("image"), failures, page["pageid"], page["title"]),
+        "printings": get_printings(card_fields),
+    }

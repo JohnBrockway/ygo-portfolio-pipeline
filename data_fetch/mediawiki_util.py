@@ -31,6 +31,18 @@ DEFAULT_PARAMS = {
     "formatversion": "2",
 }
 
+# FALLBACK, kept for posterity: if matching set pages by the set names in the
+# wikitext runs into trouble, add "linkshere" to "prop" for the card fetch (a card-only copy
+# of CATEGORY_PAGES_PARAMS in mediawiki_util) plus
+#   "lhlimit": "max", "lhprop": "pageid|title|redirect",
+#   "lhnamespace": "0|3006|3024",   # set pages, "Set Card Lists:", "Set Card Galleries:"
+# Set pages link to every card they contain, so each card's linkshere list
+# holds its sets' page IDs. It is the heaviest property, hence the namespace filter.
+# NOTE: any list property (linkshere, categories, links...) makes the API split
+# a page's data across several responses, so the paging loop in
+# mediawiki_util.query() would also need to merge responses until the API
+# reports "batchcomplete". The simple loop there does not do that.
+
 # Query parameters for fetching every page directly in one category, with its wikitext.
 # Shared by the card and set fetches; query_category_pages() adds the category itself.
 CATEGORY_PAGES_PARAMS = {

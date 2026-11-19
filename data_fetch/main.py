@@ -38,7 +38,7 @@ from itertools import chain
 from pathlib import Path
 
 from failures import Failures
-from fetch_card_util import CARD_CATEGORIES, fetch_card_records
+from fetch_card_util import CARD_CATEGORIES
 from load_inputs import (
     iter_saved_card_records,
     iter_saved_set_records,
@@ -46,7 +46,7 @@ from load_inputs import (
     load_known_errors,
 )
 from mediawiki_util import make_session
-from orchestrate import fetch_card_images, fetch_set_images, fetch_set_records
+from orchestrate import fetch_card_images, fetch_card_records, fetch_set_images, fetch_set_records
 from raw_output_writer import write_card_records, write_set_categories, write_set_records
 
 log = logging.getLogger("fetch")

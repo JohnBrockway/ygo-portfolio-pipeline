@@ -1,16 +1,19 @@
 """
 Composes the fetch steps: pulls raw pages from the wiki and turns them into the records
-that get written to disk. Cards have no composition to do (see fetch_card_util), so this
-holds the set fetch and the two image steps (set images and card images).
+that get written to disk. This holds the card and set fetches and the two image steps (set
+images and card images).
 
-The set fetch returns its records without writing anything. The image steps are the
-exception: they download straight into their folders, because they are slow and resumable
-(a rerun only fetches what's missing). Each also writes an index of the image files on disk.
+The card and set fetches return their records without writing anything (the card one as a
+generator, because there are so many cards). The image steps are the exception: they download
+straight into their folders, because they are slow and resumable (a rerun only fetches what's
+missing). Each also writes an index of the image files on disk.
 """
 import logging
 
 from fetch_image_util import download_images, local_image_name, output_name, write_image_index
 from fetch_set_util import discover_categories, fetch_tree_pages
+from mediawiki_util import query_category_pages
+from parse_card_util import parse_card_page
 from parse_set_util import parse_set_page
 
 log = logging.getLogger(__name__)
@@ -62,6 +65,17 @@ def fetch_set_records(session, failures, edition_overrides):
         records.extend(parse_set_page(page, failures))
 
     return apply_edition_overrides(records, edition_overrides, failures), tree
+
+
+def fetch_card_records(session, category, game, failures):
+    """Yield one record per parsable card page in the category; pages that can't be parsed go to failures.
+
+    A generator rather than a list: there are over 14,000 cards, each with its full printings list.
+    """
+    for page in query_category_pages(session, category):
+        record = parse_card_page(page, game, failures)
+        if record is not None:
+            yield record
 
 
 def collect_set_image_names(set_records, failures):
