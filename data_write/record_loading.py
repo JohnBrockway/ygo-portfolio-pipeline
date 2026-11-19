@@ -3,6 +3,8 @@ import json
 import logging
 from pathlib import Path
 
+from failures import KNOWN_ERROR_NOTE_FIELDS
+
 log = logging.getLogger(__name__)
 
 def find_json_files(path):
@@ -11,6 +13,23 @@ def find_json_files(path):
     if path.is_file():
         return [path]
     return sorted(path.rglob("*.json"))
+
+
+def read_json(path):
+    """The parsed contents of one JSON file."""
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def read_json_objects(path):
+    """The entries of a JSON file that holds a list of objects.
+
+    Raises ValueError if an entry isn't an object, since that is a mistake in the file itself.
+    """
+    entries = read_json(path)
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError(f"{path}: expected an object, got {entry!r}")
+    return entries
 
 
 def load_records(path, record_type, failures):
@@ -24,7 +43,7 @@ def load_records(path, record_type, failures):
 
     for file in files:
         try:
-            content = json.loads(file.read_text(encoding="utf-8"))
+            content = read_json(file)
         except Exception as error:
             failures.add("unreadable_file", record_type=record_type, file=str(file), error=repr(error))
             continue
@@ -54,13 +73,12 @@ def load_known_errors(path):
     if not path or not Path(path).exists():
         return []
 
-    entries = json.loads(Path(path).read_text(encoding="utf-8"))
+    entries = read_json_objects(path)
 
     known_errors = []
     for entry in entries:
-        if not isinstance(entry, dict):
-            raise ValueError(f"{path}: expected an object, got {entry!r}")
-        fingerprint = {field: value for field, value in entry.items() if field != "comment"}
+        fingerprint = {field: value for field, value in entry.items()
+                       if field not in KNOWN_ERROR_NOTE_FIELDS}
         if "kind" not in fingerprint or len(fingerprint) < 2:
             raise ValueError(f'{path}: expected "kind" plus at least one more field, got {entry!r}')
         if fingerprint in known_errors:
@@ -73,7 +91,7 @@ def load_card_id_overrides(path):
     if not path or not Path(path).exists():
         return {}
 
-    entries = json.loads(Path(path).read_text(encoding="utf-8"))
+    entries = read_json_objects(path)
 
     overrides = {}
     for entry in entries:
@@ -92,18 +110,11 @@ def load_printing_overrides(path):
     drop every override. An entry that isn't an object raises ValueError,
     since that is a mistake in the file itself.
     """
-    entries = json.loads(Path(path).read_text(encoding="utf-8"))
-
-    for entry in entries:
-        if not isinstance(entry, dict):
-            raise ValueError(f"{path}: expected an object, got {entry!r}")
-
-    return entries
+    return read_json_objects(path)
 
 def load_image_index(path):
     """{wiki file name: image file name} written by the fetch step's image steps.
 
     The file must exist (an empty object is fine).
     """
-    with open(path, encoding="utf-8") as file:
-        return json.load(file)
+    return read_json(path)
