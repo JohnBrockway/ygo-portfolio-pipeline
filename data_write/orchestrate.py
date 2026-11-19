@@ -94,9 +94,9 @@ def collect_card_images(cards_by_id):
     return card_images
 
 
-def build_master_data(card_records, set_records, known_duplicate_cards, printing_overrides,
-                      card_image_index, set_image_index, failures):
-    set_index = SetIndex(set_records, failures)
+def build_master_data(card_records, set_records, set_aliases, known_duplicate_cards,
+                      printing_overrides, card_image_index, set_image_index, failures):
+    set_index = SetIndex(set_records, set_aliases, failures)
     cards_by_id, resolved_printings = collect_cards(card_records, set_index, known_duplicate_cards,
                                                     card_image_index, failures)
     printings = build_printing_records(resolved_printings, failures)

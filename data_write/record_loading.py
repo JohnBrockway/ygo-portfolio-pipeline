@@ -112,6 +112,18 @@ def load_printing_overrides(path):
     """
     return read_json_objects(path)
 
+
+def load_set_aliases(path):
+    """Load the manual set-name aliases. A missing file just means there are none.
+
+    The file is a JSON list of {"region", "alias", "target_set_id", "note"?} entries.
+    SetIndex checks each entry and logs the bad ones.
+    """
+    if not path or not Path(path).exists():
+        return []
+    return read_json(path)
+
+
 def load_image_index(path):
     """{wiki file name: image file name} written by the fetch step's image steps.
 

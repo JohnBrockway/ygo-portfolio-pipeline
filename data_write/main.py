@@ -46,13 +46,14 @@ from image_output import copy_used_images
 from orchestrate import build_master_data
 from output_writer import write_master_files
 from record_loading import (load_image_index, load_known_errors, load_records,
-                            load_card_id_overrides, load_printing_overrides)
+                            load_card_id_overrides, load_printing_overrides, load_set_aliases)
 
 log = logging.getLogger("build_master")
 
 KNOWN_BUILD_ERRORS_FILE = Path("data_write/known_build_errors.json")
 KNOWN_DUPLICATE_CARDS_FILE = Path("data_write/known_duplicate_cards.json")
 PRINTING_OVERRIDES_FILE = Path("data_write/printing_overrides.json")
+SET_ALIASES_FILE = Path("data_write/set_aliases.json")
 
 
 def parse_args():
@@ -102,11 +103,12 @@ def main():
     set_records = load_records(args.sets_dir, "set", failures)
     known_duplicate_cards = load_card_id_overrides(KNOWN_DUPLICATE_CARDS_FILE)
     printing_overrides = load_printing_overrides(PRINTING_OVERRIDES_FILE)
+    set_aliases = load_set_aliases(SET_ALIASES_FILE)
     card_image_index = load_image_index(args.card_image_index)
     set_image_index = load_image_index(args.set_image_index)
 
-    master = build_master_data(card_records, set_records, known_duplicate_cards, printing_overrides,
-                               card_image_index, set_image_index, failures)
+    master = build_master_data(card_records, set_records, set_aliases, known_duplicate_cards,
+                               printing_overrides, card_image_index, set_image_index, failures)
     image_counts = copy_used_images(master, args.card_images_dir, args.set_images_dir, out_dir, failures)
     counts = write_master_files(out_dir, master, failures, pretty=args.pretty)
 

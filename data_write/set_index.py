@@ -4,11 +4,7 @@ Matching is exact: a printing's set name must equal a set record's title.
 As a last resort, when no title matches, a manual alias from set_aliases.json
 (keyed by region and alias name, pointing at a set_id) is tried.
 """
-import json
 from collections import defaultdict, namedtuple
-from pathlib import Path
-
-DEFAULT_ALIASES_PATH = Path("set_aliases.json")
 
 # Result of a lookup. On success `set_record` is filled in and the failure fields are empty.
 # On failure `set_record` is None and `failure_kind` is "ambiguous_set" or "set_not_found".
@@ -27,18 +23,6 @@ def not_found(details=None):
     return SetLookup(None, "set_not_found", details or {})
 
 
-def load_set_aliases(path=DEFAULT_ALIASES_PATH):
-    """Read the manual set-name aliases. A missing file just means there are none.
-
-    The file is a JSON list of {"region", "alias", "set_id", "note"?} entries.
-    """
-    path = Path(path)
-    if not path.exists():
-        return []
-    with path.open(encoding="utf-8") as f:
-        return json.load(f)
-
-
 class SetIndex:
     """All set records, indexed so a (set name, region) can be looked up.
 
@@ -50,7 +34,7 @@ class SetIndex:
     # released in NA only (Duel Terminal 3), so these are tried as a second choice.
     REGION_FALLBACKS = {"na": ["en"], "en": ["na"]}
 
-    def __init__(self, set_records, failures):
+    def __init__(self, set_records, set_aliases, failures):
         self.sets_by_id = {}
         self.sets_by_title = defaultdict(list)       # (region, title) -> [set records]
         self.regions_by_title = defaultdict(set)     # title -> {regions}, only to explain failures
@@ -59,7 +43,7 @@ class SetIndex:
 
         for record in set_records:
             self._add_set(record, failures)
-        for entry in load_set_aliases():
+        for entry in set_aliases:
             self._add_alias(entry, failures)
 
     # ------------------------------------------------------------ building the index
