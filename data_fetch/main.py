@@ -34,20 +34,26 @@ Usage:
 """
 import argparse
 import logging
+import sys
 from itertools import chain
 from pathlib import Path
 
-from failures import Failures
-from fetch_card_util import CARD_CATEGORIES
-from load_inputs import (
+# Lets `python data_fetch/main.py` import the data_fetch and common packages by putting the
+# project root (this folder's parent, which holds both) on sys.path.
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from data_fetch.failures import Failures
+from data_fetch.fetch_card_util import CARD_CATEGORIES
+from data_fetch.load_inputs import (
     iter_saved_card_records,
     iter_saved_set_records,
     load_edition_overrides,
     load_known_errors,
 )
-from mediawiki_util import make_session
-from orchestrate import fetch_card_images, fetch_card_records, fetch_set_images, fetch_set_records
-from raw_output_writer import write_card_records, write_set_categories, write_set_records
+from data_fetch.mediawiki_util import make_session
+from data_fetch.orchestrate import fetch_card_images, fetch_card_records, fetch_set_images, fetch_set_records
+from data_fetch.raw_output_writer import write_card_records, write_set_categories, write_set_records
 
 log = logging.getLogger("fetch")
 

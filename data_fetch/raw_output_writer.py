@@ -3,7 +3,7 @@ import json
 import logging
 import shutil
 
-from progress import Progress
+from data_fetch.progress import Progress
 
 log = logging.getLogger(__name__)
 

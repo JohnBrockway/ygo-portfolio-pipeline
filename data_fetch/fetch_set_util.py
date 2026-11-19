@@ -16,8 +16,8 @@ import logging
 import re
 from collections import deque
 
-from mediawiki_util import query, query_category_pages
-from progress import Progress
+from data_fetch.mediawiki_util import query, query_category_pages
+from data_fetch.progress import Progress
 
 log = logging.getLogger(__name__)
 

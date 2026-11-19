@@ -4,7 +4,7 @@ overrides) and the set and card records saved by an earlier run.
 """
 import json
 
-from parse_set_util import EDITION_FIELDS
+from data_fetch.parse_set_util import EDITION_FIELDS
 
 
 def load_known_errors(path):

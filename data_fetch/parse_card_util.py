@@ -1,10 +1,10 @@
 """Parsing of card page wikitext: the CardTable2 template, printings, images and card type."""
 import re
 
-from regions import WHITELISTED_REGIONS
-from wikitext_util import find_template
-
 import wikitextparser as wtp
+
+from data_fetch.regions import WHITELISTED_REGIONS
+from data_fetch.wikitext_util import find_template
 
 COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 

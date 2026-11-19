@@ -18,7 +18,7 @@ import re
 import requests
 from PIL import Image
 
-from mediawiki_util import download, query
+from data_fetch.mediawiki_util import download, query
 
 log = logging.getLogger(__name__)
 

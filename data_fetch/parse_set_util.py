@@ -1,10 +1,11 @@
 """Parsing of set page wikitext: the Infobox set and Set navigation templates, into one record per region."""
 import re
 from datetime import datetime
-from regions import WHITELISTED_REGIONS
-from wikitext_util import find_template
 
 import wikitextparser as wtp
+
+from data_fetch.regions import WHITELISTED_REGIONS
+from data_fetch.wikitext_util import find_template
 
 # There are two different namespaces of codes present in dict keys
 #   - Regions ("jp", "en", etc.)

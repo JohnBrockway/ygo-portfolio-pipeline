@@ -1,0 +1,1 @@
+"""Fetches cards, sets and their images from Yugipedia into raw JSON and WebP files."""

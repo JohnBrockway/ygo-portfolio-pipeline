@@ -10,11 +10,11 @@ missing). Each also writes an index of the image files on disk.
 """
 import logging
 
-from fetch_image_util import download_images, local_image_name, output_name, write_image_index
-from fetch_set_util import discover_categories, fetch_tree_pages
-from mediawiki_util import query_category_pages
-from parse_card_util import parse_card_page
-from parse_set_util import parse_set_page
+from data_fetch.fetch_image_util import download_images, local_image_name, output_name, write_image_index
+from data_fetch.fetch_set_util import discover_categories, fetch_tree_pages
+from data_fetch.mediawiki_util import query_category_pages
+from data_fetch.parse_card_util import parse_card_page
+from data_fetch.parse_set_util import parse_set_page
 
 log = logging.getLogger(__name__)
 
