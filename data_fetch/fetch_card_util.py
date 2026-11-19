@@ -1,9 +1,9 @@
 """
-Fetch loop for card pages: the card categories to fetch, the query parameters, the parsing
-of one page into the JSON record the rest of the pipeline reads, and a generator over
-every parsable card in one category.
+Fetch loop for card pages: the card categories to fetch, the parsing of one page into the
+JSON record the rest of the pipeline reads, and a generator over every parsable card in one
+category.
 """
-from mediawiki_util import query_pages
+from mediawiki_util import query_category_pages
 from parse_card_util import parse_card_table_2, get_printings, get_images, get_card_type
 
 # One entry per wiki category of cards. Every card found in a category is tagged with that
@@ -16,7 +16,8 @@ CARD_CATEGORIES = [
 ]
 
 # FALLBACK, kept for posterity: if matching set pages by the set names in the
-# wikitext runs into trouble, add "linkshere" to "prop" below plus
+# wikitext runs into trouble, add "linkshere" to "prop" for the card fetch (a card-only copy
+# of CATEGORY_PAGES_PARAMS in mediawiki_util) plus
 #   "lhlimit": "max", "lhprop": "pageid|title|redirect",
 #   "lhnamespace": "0|3006|3024",   # set pages, "Set Card Lists:", "Set Card Galleries:"
 # Set pages link to every card they contain, so each card's linkshere list
@@ -25,26 +26,6 @@ CARD_CATEGORIES = [
 # a page's data across several responses, so the paging loop in
 # mediawiki_util.query() would also need to merge responses until the API
 # reports "batchcomplete". The simple loop there does not do that.
-
-# Query parameters shared by every card category; card_query_params() adds the category itself.
-CARD_QUERY_PARAMS = {
-    "redirects": "true",
-    "generator": "categorymembers",
-    "gcmtype": "page",              # pages only, not subcategories
-    "gcmlimit": "50",               # pages per request
-    "prop": "revisions|info",       # properties to report from each page
-    "rvprop": "content",            # props to include in the revisions prop
-    "rvslots": "main",              # wikitext is stored in the main slot
-    "inprop": "url",                # extra optional fields to include in info prop
-}
-
-
-def card_query_params(category):
-    """The query parameters for fetching every page in one card category."""
-    params = dict(CARD_QUERY_PARAMS)
-    params["gcmtitle"] = category   # what we're filtering by
-    return params
-
 
 def verify_numeral(string):
     """
@@ -90,7 +71,7 @@ def build_card_record(card_page, game, failures):
 
 def fetch_card_records(session, category, game, failures):
     """Yield one record per parsable card page in the category; pages that can't be parsed go to failures."""
-    for page in query_pages(session, card_query_params(category)):
+    for page in query_category_pages(session, category):
         record = build_card_record(page, game, failures)
         if record is None:
             failures.add("card_page_unparseable", page_id=page['pageid'], title=page.get('title'))

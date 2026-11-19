@@ -16,7 +16,7 @@ import logging
 import re
 from collections import deque
 
-from mediawiki_util import query, query_pages
+from mediawiki_util import query, query_category_pages
 from progress import Progress
 
 log = logging.getLogger(__name__)
@@ -85,18 +85,8 @@ def fetch_tree_pages(session, categories):
     for index, category in enumerate(categories, start=1):
         log.debug("Category %d/%d: %s", index, total, category)
         progress.update("Fetching set pages: category %d/%d, %d pages so far", index, total, len(seen_ids))
-        params = {
-            "redirects": "true",
-            "generator": "categorymembers",
-            "gcmtitle": category,
-            "gcmtype": "page",              # pages only; subcategories have already been handled by discover_categories
-            "gcmlimit": "50",
-            "prop": "revisions|info",       # same properties as the card fetch
-            "rvprop": "content",
-            "rvslots": "main",
-            "inprop": "url",
-        }
-        for page in query_pages(session, params):
+        # Direct pages only: subcategories have already been handled by discover_categories.
+        for page in query_category_pages(session, category):
             progress.update("Fetching set pages: category %d/%d, %d pages so far", index, total, len(seen_ids))
             if "revisions" not in page:
                 continue                    # missing page or a batch without content

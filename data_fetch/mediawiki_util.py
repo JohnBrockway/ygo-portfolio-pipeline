@@ -31,6 +31,19 @@ DEFAULT_PARAMS = {
     "formatversion": "2",
 }
 
+# Query parameters for fetching every page directly in one category, with its wikitext.
+# Shared by the card and set fetches; query_category_pages() adds the category itself.
+CATEGORY_PAGES_PARAMS = {
+    "redirects": "true",
+    "generator": "categorymembers",
+    "gcmtype": "page",              # pages only, not subcategories
+    "gcmlimit": "50",               # pages per request
+    "prop": "revisions|info",       # properties to report from each page
+    "rvprop": "content",            # props to include in the revisions prop
+    "rvslots": "main",              # wikitext is stored in the main slot
+    "inprop": "url",                # extra optional fields to include in info prop
+}
+
 _last_request_time = 0.0
 
 
@@ -133,3 +146,9 @@ def query_pages(session, params):
         pages = data.get("query", {}).get("pages", [])
         log.debug("Request %d: %d pages", requests_made, len(pages))
         yield from pages
+
+
+def query_category_pages(session, category):
+    """Yield every page directly in the category (subcategories are not followed), with its wikitext."""
+    params = {**CATEGORY_PAGES_PARAMS, "gcmtitle": category}
+    yield from query_pages(session, params)
