@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-build_backend.py - join card printings to set records and write the master dataset.
+main.py - join card printings to set records and write the master dataset.
 
 Inputs (JSON files, one record per file or a list per file; searched recursively):
   --cards-dir   one or more folders of card records, one folder per game
@@ -10,20 +10,21 @@ Inputs (JSON files, one record per file or a list per file; searched recursively
   --set-image-index   JSON written by the fetch set_images step, same shape
                     Images with no entry get a null "file" (cards) or "image" (sets) in the
                     master data (and are reported).
-  --known-errors    JSON list of failures already reviewed and accepted, so they are not logged
-                    (a missing file means none are known). Each entry is a failure line from
-                    failures.jsonl cut down to the fields that identify it, always including "kind",
-                    e.g. {"kind": "empty_set", "set_id": "1001672-jp", "title": "Set Page Title"}.
-                    A failure matches an entry when it has every one of the entry's fields with the
-                    same value, so list enough fields to pin down exactly the failure you reviewed.
-                    "comment" is a free-text note and is never matched. An entry that matches nothing
-                    in a run is reported as stale_known_error, so it can be removed.
 
+Curated files (fixed paths, read relative to where the script is run; no command-line options):
+  data_write/card_id_overrides.json       manual card ids for cards whose natural id collides,
+                                          keyed by wiki page_id (a missing file means none)
+  data_write/known_build_errors.json      failures already reviewed and accepted, so they are not
+                                          logged (a missing file means none); the entry format is
+                                          described in failures.py
+  data_write/printing_overrides.json      which artwork a printing shows (must exist; [] is fine);
+                                          the entry format is described in printing_overrides.py
+  data_write/set_aliases.json             manual set-name aliases (a missing file means none)
 
 
 Outputs (in --out-dir):
   cards.json, sets.json, printings.json   the master data (normalized; a setcode lists its printings)
-  card_images/, set_images/               only the images that cards.json / sets.json reference,
+  cards/, sets/                           only the images that cards.json / sets.json reference,
                                           copied from the fetch folders (stale files removed)
   manifest.json                           counts + sha256 per file (cache-busting for clients)
   failures.jsonl                          one line per failure/warning, every occurrence
@@ -38,15 +39,14 @@ Usage:
 """
 import argparse
 import logging
-from itertools import chain
 from pathlib import Path
 
 from failures import Failures
 from image_output import copy_used_images
 from orchestrate import build_master_data
 from output_writer import write_master_files
-from record_loading import (load_image_index, load_known_errors, load_records,
-                            load_card_id_overrides, load_printing_overrides, load_set_aliases)
+from record_loading import (load_card_id_overrides, load_image_index, load_known_errors,
+                            load_printing_overrides, load_records, load_set_aliases)
 
 log = logging.getLogger("build_master")
 
@@ -97,9 +97,9 @@ def main():
 
     failures = Failures(load_known_errors(KNOWN_BUILD_ERRORS_FILE))
     # Every folder's records in one list; each record says which game it belongs to.
-    card_records = list(chain.from_iterable(
-        load_records(cards_dir, "card", failures) for cards_dir in args.cards_dir
-    ))
+    card_records = []
+    for cards_dir in args.cards_dir:
+        card_records += load_records(cards_dir, "card", failures)
     set_records = load_records(args.sets_dir, "set", failures)
     card_id_overrides = load_card_id_overrides(CARD_ID_OVERRIDES_FILE)
     printing_overrides = load_printing_overrides(PRINTING_OVERRIDES_FILE)

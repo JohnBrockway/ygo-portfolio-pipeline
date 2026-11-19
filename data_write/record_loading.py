@@ -7,6 +7,7 @@ from failures import KNOWN_ERROR_NOTE_FIELDS
 
 log = logging.getLogger(__name__)
 
+
 def find_json_files(path):
     """A single file, or every .json file under a directory (recursively)."""
     path = Path(path)
@@ -86,6 +87,7 @@ def load_known_errors(path):
         known_errors.append(fingerprint)
     return known_errors
 
+
 def load_card_id_overrides(path):
     """Load the manual card id overrides, keyed by wiki page_id."""
     if not path or not Path(path).exists():
@@ -101,6 +103,7 @@ def load_card_id_overrides(path):
         overrides[page_id] = entry
 
     return overrides
+
 
 def load_printing_overrides(path):
     """Load the manual printing overrides (which artwork a printing shows) as a list of entries.

@@ -4,11 +4,8 @@ Card and set images are handled the same way: the output folder ends up holding 
 files that cards.json / sets.json reference, so images for pruned cards or sets, and stale
 files left by earlier builds, are not shipped.
 """
-import logging
 import shutil
 from pathlib import Path
-
-log = logging.getLogger("build_master")
 
 
 def used_card_image_files(cards):
@@ -68,7 +65,7 @@ def sync_images(source_dir, dest_dir, used_files, folder_name, failures):
 
 
 def copy_used_images(master, card_images_dir, set_images_dir, out_dir, failures):
-    """Copy the images cards.json and sets.json use into <out_dir>/card_images and set_images."""
+    """Copy the images cards.json and sets.json use into <out_dir>/cards and <out_dir>/sets."""
     out_dir = Path(out_dir)
     return {
         "card_images": sync_images(card_images_dir, out_dir / "cards",

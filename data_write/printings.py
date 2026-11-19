@@ -40,7 +40,7 @@ def resolve_card_printings(card_id, card_title, raw_printings, set_index, failur
             "card": card_title,
             "region": region,
             "set_name": set_name,
-            "set_number": set_number
+            "set_number": set_number,
         }
 
         if not set_name or not region:

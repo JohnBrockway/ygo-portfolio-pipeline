@@ -1,9 +1,6 @@
 """Collects every failure/warning from the build."""
 import json
-import logging
 from collections import Counter
-
-log = logging.getLogger(__name__)
 
 # Fields allowed on a known error for humans to read; not used when matching.
 KNOWN_ERROR_NOTE_FIELDS = {"comment"}

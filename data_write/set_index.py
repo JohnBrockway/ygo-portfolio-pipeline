@@ -144,4 +144,4 @@ class SetIndex:
         unused = set(self.set_ids_by_alias) - self.used_aliases
         for region, alias in sorted(unused):
             failures.add("unused_set_alias", region=region, alias=alias,
-                        set_id=self.set_ids_by_alias[(region, alias)])
+                         set_id=self.set_ids_by_alias[(region, alias)])
