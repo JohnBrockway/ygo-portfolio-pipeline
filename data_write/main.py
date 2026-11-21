@@ -11,15 +11,15 @@ Inputs (JSON files, one record per file or a list per file; searched recursively
                     Images with no entry get a null "file" (cards) or "image" (sets) in the
                     master data (and are reported).
 
-Curated files (fixed paths, read relative to where the script is run; no command-line options):
+Curated files (fixed paths, read relative to where the script is run; no command-line
+options). Each must exist, but an empty list [] is fine:
   data_write/card_id_overrides.json       manual card ids for cards whose natural id collides,
-                                          keyed by wiki page_id (a missing file means none)
+                                          keyed by wiki page_id
   data_write/known_build_errors.json      failures already reviewed and accepted, so they are not
-                                          logged (a missing file means none); the entry format is
-                                          described in failures.py
-  data_write/printing_overrides.json      which artwork a printing shows (must exist; [] is fine);
-                                          the entry format is described in printing_overrides.py
-  data_write/set_aliases.json             manual set-name aliases (a missing file means none)
+                                          logged; the entry format is described in failures.py
+  data_write/printing_overrides.json      which artwork a printing shows; the entry format is
+                                          described in printing_overrides.py
+  data_write/set_aliases.json             manual set-name aliases
 
 
 Outputs (in --out-dir):

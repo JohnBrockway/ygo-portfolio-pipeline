@@ -66,14 +66,13 @@ def load_known_errors(path):
 
     The file is a list of objects, each a failure line from failures.jsonl cut down to the
     fields that identify it, e.g. {"kind": "empty_set", "set_id": "1001672-jp", "title": "Some Set Page"}.
-    "comment" is a free-text note and is dropped. A missing file just means no known errors.
+    "comment" is a free-text note and is dropped.
+    The file must exist (an empty list is fine), so a wrong path can't silently
+    drop every known error.
     An entry that isn't an object, has no "kind", has nothing but "kind" (it would silence a
     whole kind of failure), or repeats another entry raises ValueError, since that is a
     mistake in the file itself.
     """
-    if not path or not Path(path).exists():
-        return []
-
     entries = read_json_objects(path)
 
     known_errors = []
@@ -89,10 +88,11 @@ def load_known_errors(path):
 
 
 def load_card_id_overrides(path):
-    """Load the manual card id overrides, keyed by wiki page_id."""
-    if not path or not Path(path).exists():
-        return {}
+    """Load the manual card id overrides, keyed by wiki page_id.
 
+    The file must exist (an empty list is fine), so a wrong path can't silently
+    drop every override.
+    """
     entries = read_json_objects(path)
 
     overrides = {}
@@ -117,13 +117,13 @@ def load_printing_overrides(path):
 
 
 def load_set_aliases(path):
-    """Load the manual set-name aliases. A missing file just means there are none.
+    """Load the manual set-name aliases.
 
+    The file must exist (an empty list is fine), so a wrong path can't silently
+    drop every alias.
     The file is a JSON list of {"region", "alias", "target_set_id", "note"?} entries.
     SetIndex checks each entry and logs the bad ones.
     """
-    if not path or not Path(path).exists():
-        return []
     return read_json(path)
 
 
