@@ -30,8 +30,8 @@ Outputs (in --out-dir):
   failures.jsonl                          one line per failure/warning, every occurrence
   build.log                               full log
 
-Usage:
-  python main.py --cards-dir data/duel_monsters_cards data/rush_duel_cards \
+Usage (run from the project root):
+  python data_write/main.py --cards-dir data/duel_monsters_cards data/rush_duel_cards \
       --sets-dir data/sets \
       --card-image-index data/card_image_index.json --set-image-index data/set_image_index.json \
       --card-images-dir data/card_images --set-images-dir data/set_images \
@@ -39,14 +39,20 @@ Usage:
 """
 import argparse
 import logging
+import sys
 from pathlib import Path
 
-from failures import Failures
-from image_output import copy_used_images
-from orchestrate import build_master_data
-from output_writer import write_master_files
-from record_loading import (load_card_id_overrides, load_image_index, load_known_errors,
-                            load_printing_overrides, load_records, load_set_aliases)
+# If run as `python data_write/main.py`, only data_write/ is on the import path by default.
+# Adding the project root makes the data_write package and its neighbour common/ importable.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from common.failures import Failures
+from data_write.image_output import copy_used_images
+from data_write.orchestrate import build_master_data
+from data_write.output_writer import write_master_files
+from data_write.record_loading import (load_card_id_overrides, load_image_index,
+                                       load_known_errors, load_printing_overrides,
+                                       load_records, load_set_aliases)
 
 log = logging.getLogger("build_master")
 

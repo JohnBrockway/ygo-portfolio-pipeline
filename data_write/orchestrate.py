@@ -1,11 +1,11 @@
 """Joins cards, printings and sets into the master dataset."""
 from collections import namedtuple
 
-from cards import build_card_record, choose_card_id
-from printing_overrides import apply_printing_overrides
-from printings import build_printing_records, resolve_card_printings
-from set_index import SetIndex
-from set_pruning import build_set_records
+from data_write.cards import build_card_record, choose_card_id
+from data_write.printing_overrides import apply_printing_overrides
+from data_write.printings import build_printing_records, resolve_card_printings
+from data_write.set_index import SetIndex
+from data_write.set_pruning import build_set_records
 
 MasterData = namedtuple("MasterData", ["cards", "sets", "printings"])
 

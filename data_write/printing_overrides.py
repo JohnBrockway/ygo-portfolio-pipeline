@@ -25,7 +25,7 @@ Each entry looks like:
 Bad entries are logged as failures and skipped, except an entry whose image
 changed, which is logged and still applied.
 """
-from printings import FIRST_VARIANT, make_printing, sort_printings
+from data_write.printings import FIRST_VARIANT, make_printing, sort_printings
 
 
 def find_printing(setcode_record, rarity, variant):

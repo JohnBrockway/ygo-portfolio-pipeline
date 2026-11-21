@@ -3,7 +3,7 @@ import json
 import logging
 from pathlib import Path
 
-from failures import KNOWN_ERROR_NOTE_FIELDS
+from common.failures import KNOWN_ERROR_NOTE_FIELDS
 
 log = logging.getLogger(__name__)
 

@@ -13,7 +13,7 @@ Two steps:
 """
 from collections import defaultdict
 
-from text_utils import compact_uppercase, slugify
+from data_write.text_utils import compact_uppercase, slugify
 
 FIRST_VARIANT = 1
 
